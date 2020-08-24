@@ -6,10 +6,7 @@ __lua__
 --TODO:
 ----4. coup fourre!
 ----5. if draw during extension, bonus goes to non-calling player
-----5. w-l record save/clear
-----6. card playing improvements
------- slow down cpu play
------- discard pile
+----6. w-l record save/clear
 ----7. better sprites
 ----8. card legend screen
 
@@ -182,19 +179,8 @@ function update_game()
 
 					if #matchwinner > 0 then
 						matchover = true
-						--debug = "*** "..matchwinner.." wins the match ***"
-						--cpudebug = "press ❎ to start a new match!"
-						
-						--if btnp(5) then
-						--	newmatch()
-						--end
 					else
 						raceover = true
-						--debug = racewinner.." wins!"
-						--cpudebug = "press ❎ to start the next race!"
-						--if btnp(5) then
-						--	newrace()
-						--end
 					end
 				end
 			elseif racewinner == "cpu" then
@@ -213,18 +199,8 @@ function update_game()
 
 					if #matchwinner > 0 then
 						matchover = true
-						--debug = "*** "..matchwinner.." wins the match ***"
-						--cpudebug = "press ❎ to start a new match!"
-						--if btnp(5) then
-						--	newmatch()
-						--end
 					else
 						raceover = true
-						--debug = racewinner.." wins!"
-						--cpudebug = "press ❎ to start the next race!"
-						--if btnp(5) then
-						--	newrace()
-						--end
 					end
 				end
 			else
@@ -236,18 +212,8 @@ function update_game()
 
 				if #matchwinner > 0 then
 					matchover = true
-					--debug = "*** "..matchwinner.." wins the match ***"
-					--cpudebug = "press ❎ to start a new match!"
-					--if btnp(5) then
-					--	newmatch()
-					--end
 				else
 					raceover = true
-					--debug = "nobody finished the race"
-					--cpudebug = "press ❎ to start the next race!"
-					--if btnp(5) then
-					--	newrace()
-					--end
 				end
 			end
 		else
@@ -259,22 +225,8 @@ function update_game()
 
 			if #matchwinner > 0 then
 				matchover = true
-				--debug = "*** "..matchwinner.." wins the match ***"
-				--cpudebug = "press ❎ to start a new match!"
-				--if btnp(5) then
-				--	newmatch()
-				--end
 			else
 				raceover = true
-				--if racewinner == "draw" then
-				--	debug = "nobody finished the race"
-				--else
-				--	debug = racewinner.." wins!"
-				--end
-				--cpudebug = "press ❎ to start the next race!"
-				--if btnp(5) then
-				--	newrace()
-				--end
 			end
 		end
 	else
@@ -293,7 +245,6 @@ function update_game()
 		end
 	
 		if not turninprogress and not drawupinprogress then
---			turninprogress = true
 			playinprogress = false
 			if currentplayer.name==player.name then
 				currentplayer = cpu
@@ -432,7 +383,6 @@ function update_game()
 						if playercardptr > #(player.hand) then
 							playercardptr-=1
 						end
-						--turninprogress = false
 						playinprogress = true
 					else
 						debug = "invalid play: " .. player.hand[playercardptr].name
@@ -445,7 +395,6 @@ function update_game()
 						if playercardptr > #(player.hand) then
 							playercardptr-=1
 						end
-						--turninprogress = false
 						discardinprogress = true
 					end
 				end
@@ -463,7 +412,6 @@ function update_game()
 						cpu.prevupcard = cpu.upcard
 						playcard(cpu,player,cpu.hand[i])
 						animatecard(playedcard,cpu,player)
-						--turninprogress = false
 						playinprogress = true
 						return
 					end
@@ -473,7 +421,6 @@ function update_game()
 				debug=""
 				cpudebug="cpu discards "..cpu.hand[1].name
 				discard(cpu,cpu.hand[1])
-				--turninprogress = false
 				discardinprogress = true
 			end
 		end
@@ -889,82 +836,66 @@ function isracewon()
 		return ""
 	end
 	
-	-- TODO: don't add points to total here, we may call extension!
+	-- We calculate but don't add points to total here, we may call extension!
 	playerraceoverpoints = 0
 	cpuraceoverpoints = 0
 
-	--player.total += player.score
 	playerraceoverpoints += player.score
-	--player.total += #(player.safeties) * 100
 	playerraceoverpoints += #(player.safeties) * 100
 	if #(player.safeties) == 4 then
-		--player.total += 400
 		playerraceoverpoints += 400
 	end
-	--cpu.total += cpu.score
 	cpuraceoverpoints += cpu.score
-	--cpu.total += #(cpu.safeties) * 100
 	cpuraceoverpoints += #(cpu.safeties) * 100
 	if #(cpu.safeties) == 4 then
-		--cpu.total += 400
 		cpuraceoverpoints += 400
 	end
 	
 	if winner.name == "player" then
 		-- race winner gets 400 points
-		--winner.total += 400
 		playerraceoverpoints += 400
 	
 		if loser.score == 0 then
 			-- shutout, 500 points
-			--winner.total += 500
 			playerraceoverpoints += 500
 		end
 
 		if #deck == 0 then
 			-- delayed action, 300 points
-			--winner.total += 300
 			playerraceoverpoints += 300
 		end
 	
 		if winner.num200s == 0 then
 			-- safe trip, 300 points
-			--winner.total += 300
 			playerraceoverpoints += 300
 		end
 		
 		if curgoal == extgoal then
 			-- extension, 200 points
-			--winner.total += 200
 			playerraceoverpoints += 200
 		end
 		-- TODO: coup fourre, 300 points each
 	elseif winner.name == "cpu" then
 		-- race winner gets 400 points
-		--winner.total += 400
 		cpuraceoverpoints += 400
 	
 		if loser.score == 0 then
 			-- shutout, 500 points
-			--winner.total += 500
 			cpuraceoverpoints += 500
 		end
 
 		if #deck == 0 then
 			-- delayed action, 300 points
-			--winner.total += 300
 			cpuraceoverpoints += 300
 		end
 	
 		if winner.num200s == 0 then
 			-- safe trip, 300 points
-			--winner.total += 300
 			cpuraceoverpoints += 300
 		end
 		
 		if curgoal == extgoal then
 			-- extension, 200 points
-			--winner.total += 200
 			cpuraceoverpoints += 200
 		end
 		-- TODO: coup fourre, 300 points each
