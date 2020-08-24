@@ -5,6 +5,7 @@ __lua__
 
 --TODO:
 ----4. coup fourre!
+----5. extension
 ----5. w-l record save/clear
 ----6. card playing improvements
 ------ slow down cpu play
@@ -18,8 +19,8 @@ function _init()
 	debugbox = {x=0,y=102,xe=128,ye=112,col=5}
 	cpubox = {x=0,y=114,xe=128,ye=124,col=4}
 	playerptrbox = {x=10,y=30,xe=80,ye=40,col=0}
-	player = {name="player",col=3,hand={},score=0,total=0,cfs=0,num200s=0,limit=false,upcard=nil,safeties={}}
-	cpu = {name="cpu",col=4,hand={},score=0,total=0,cfs=0,num200s=0,limit=false,upcard=nil,safeties={},skill=1}
+	player = {name="player",col=3,hand={},score=0,total=0,cfs=0,num200s=0,limit=false,upcard=nil,prevupcard=nil,safeties={},cardy=20,box=playerbox}
+	cpu = {name="cpu",col=4,hand={},score=0,total=0,cfs=0,num200s=0,limit=false,upcard=nil,prevupcard=nil,safeties={},cardy=60,box=cpubox,skill=1}
 	dealt = false
 	stdgoal = 700
 	extgoal = 1000
@@ -27,15 +28,32 @@ function _init()
 	totalgoal = 5000
 	currentplayer = {name="nobody"}
 	turninprogress = false
+	playinprogress = false
+	discardinprogress = false
+	drawupinprogress = false
+	playedcard = nil
+	playedcardtarget = nil
+	discardedcard = nil
+	drawncard = nil
+	cardplayspeed = 0.02
 	mode = "start"
 	playercardptr = 1
+	deckx = 100
+	decky = 78
+	limitx = 94
+	cardtargetx = -1
+	cardtargety = -1
 	
 	racewinner = ""
 	matchwinner = ""
+	
+	playerraceoverpoints = 0
+	cpuraceoverpoints = 0
 
 	-- debugging
 	debug = ""
 	cpudebug = ""
+	cheat = false
 	palt(14,true)
 	palt(0,false)
 end
@@ -54,45 +72,45 @@ function shuffledeck()
 	for i=1,14 do
 		-- add number cards
 		if i <= 10 then
-			add(_d,{type="n",value=25,belowlimit=true,name="25",remedy="",safety="",sprite=1})
-			add(_d,{type="n",value=50,belowlimit=true,name="50",remedy="",safety="",sprite=2})
-			add(_d,{type="n",value=75,belowlimit=false,name="75",remedy="",safety="",sprite=3})
+			add(_d,{type="n",value=25,belowlimit=true,name="25",remedy="",safety="",sprite=1,x=-1,y=-1})
+			add(_d,{type="n",value=50,belowlimit=true,name="50",remedy="",safety="",sprite=2,x=-1,y=-1})
+			add(_d,{type="n",value=75,belowlimit=false,name="75",remedy="",safety="",sprite=3,x=-1,y=-1})
 		end
 		if i <= 12 then
-			add(_d,{type="n",value=100,belowlimit=false,name="100",remedy="",safety="",sprite=4})
+			add(_d,{type="n",value=100,belowlimit=false,name="100",remedy="",safety="",sprite=4,x=-1,y=-1})
 		end
 
 		if i <=4 then
-			add(_d,{type="n",value=200,belowlimit=false,name="200",remedy="",safety="",sprite=5})
+			add(_d,{type="n",value=200,belowlimit=false,name="200",remedy="",safety="",sprite=5,x=-1,y=-1})
 		end
 		-- add go cards
-		add(_d,{type="g",value=0,belowlimit=false,name="go",remedy="",safety="",sprite=6})
+		add(_d,{type="g",value=0,belowlimit=false,name="go",remedy="",safety="",sprite=6,x=-1,y=-1})
 		-- add stop cards
 		if i <=5 then
-			add(_d,{type="s",value=0,belowlimit=false,name="stop",remedy="",safety="emergency",sprite=7})
+			add(_d,{type="s",value=0,belowlimit=false,name="stop",remedy="",safety="emergency",sprite=7,x=-1,y=-1})
 		end
 		-- add hazards + speed limits
 		if i <= 3 then
-			add(_d,{type="h",value=0,belowlimit=false,name="flat",remedy="spare",safety="ppt",sprite=8})
-			add(_d,{type="h",value=0,belowlimit=false,name="crash",remedy="repair",safety="ace",sprite=9})
-			add(_d,{type="h",value=0,belowlimit=false,name="empty",remedy="gascan",safety="tanker",sprite=10})
+			add(_d,{type="h",value=0,belowlimit=false,name="flat",remedy="spare",safety="ppt",sprite=8,x=-1,y=-1})
+			add(_d,{type="h",value=0,belowlimit=false,name="crash",remedy="repair",safety="ace",sprite=9,x=-1,y=-1})
+			add(_d,{type="h",value=0,belowlimit=false,name="empty",remedy="gascan",safety="tanker",sprite=10,x=-1,y=-1})
 		end
 		if i <= 4 then
-			add(_d,{type="l",value=0,belowlimit=false,name="limit 50",remedy="nolimit",safety="emergency",sprite=12})
+			add(_d,{type="l",value=0,belowlimit=false,name="limit 50",remedy="nolimit",safety="emergency",sprite=12,x=-1,y=-1})
 		end
 		-- add remedies + remove limits
 		if i <= 6 then
-			add(_d,{type="v",value=0,belowlimit=false,name="nolimit",remedy="",safety="emergency",sprite=11})
-			add(_d,{type="r",value=0,belowlimit=false,name="gascan",remedy="",safety="",sprite=17})
-			add(_d,{type="r",value=0,belowlimit=false,name="repair",remedy="",safety="",sprite=18})
-			add(_d,{type="r",value=0,belowlimit=false,name="spare",remedy="",safety="",sprite=19})
+			add(_d,{type="v",value=0,belowlimit=false,name="nolimit",remedy="",safety="emergency",sprite=11,x=-1,y=-1})
+			add(_d,{type="r",value=0,belowlimit=false,name="gascan",remedy="",safety="",sprite=17,x=-1,y=-1})
+			add(_d,{type="r",value=0,belowlimit=false,name="repair",remedy="",safety="",sprite=18,x=-1,y=-1})
+			add(_d,{type="r",value=0,belowlimit=false,name="spare",remedy="",safety="",sprite=19,x=-1,y=-1})
 		end
 		-- add safeties
 		if i == 1 then
-			add(_d,{type="f",value=0,belowlimit=false,name="ppt",remedy="",safety="",sprite=13})
-			add(_d,{type="f",value=0,belowlimit=false,name="tanker",remedy="",safety="",sprite=14})
-			add(_d,{type="f",value=0,belowlimit=false,name="ace",remedy="",safety="",sprite=15})
-			add(_d,{type="f",value=0,belowlimit=false,name="emergency",remedy="",safety="",sprite=16})
+			add(_d,{type="f",value=0,belowlimit=false,name="ppt",remedy="",safety="",sprite=13,x=-1,y=-1})
+			add(_d,{type="f",value=0,belowlimit=false,name="tanker",remedy="",safety="",sprite=14,x=-1,y=-1})
+			add(_d,{type="f",value=0,belowlimit=false,name="ace",remedy="",safety="",sprite=15,x=-1,y=-1})
+			add(_d,{type="f",value=0,belowlimit=false,name="emergency",remedy="",safety="",sprite=16,x=-1,y=-1})
 		end
 	end
 	
@@ -123,13 +141,14 @@ end
 
 function update_game()
 	-- check for race win condition
-	-- TODO: figure out how not to call newrace() twice
-	if #racewinner == 0 then
+	if #racewinner == 0 and not drawupinprogress and not turninprogress and not playinprogress and not discardinprogress then
 		racewinner = isracewon()
 	end
 
 	-- check for match win condition
+	-- TODO: only check this AFTER checking extension!
 	matchwinner = ismatchwon()
+
 	if #matchwinner > 0 then
 		debug = "*** "..matchwinner.." wins the match ***"
 		cpudebug = "press ❎ to start a new match!"
@@ -149,79 +168,202 @@ function update_game()
 	else
 		-- deal the players a hand
 		if not dealt then
+			if cheat then
+				cheatdealto(player)
+			end
 			for i=1,6 do
-				dealto(player)
-				dealto(cpu)
+				if not cheat then
+					dealto(player,i)
+				end
+				dealto(cpu,i)
 			end
 			dealt = true
 		end
 	
-		if not turninprogress then
-			turninprogress = true
+		if not turninprogress and not drawupinprogress then
+--			turninprogress = true
+			playinprogress = false
 			if currentplayer.name==player.name then
 				currentplayer = cpu
 			else
 				currentplayer = player
 			end
 			draw_up(currentplayer)
+			drawupinprogress = true
 		end
-		if currentplayer.name==player.name then
-			if btnp(1) then
-				playercardptr += 1
-				if playercardptr > #(player.hand) then
-					playercardptr = 1
+		if drawupinprogress then
+			if drawncard != nil then
+				drawncard.x += drawncard.dx
+				if drawncard.dx < 0 and drawncard.x <= cardtargetx then
+					drawncard.x = cardtargetx
+					drawncard.dx = 0
+				elseif drawncard.dx > 0 and drawncard.x >= cardtargetx then
+					drawncard.x = cardtargetx
+					drawncard.dx = 0
 				end
-				debug=""
-				sfx(0)
-			elseif btnp(0) then
-				playercardptr -= 1
-				if playercardptr == 0 then
-					playercardptr = #(player.hand)
+				-- card could move up or down depending on type and player
+				drawncard.y += drawncard.dy
+				if drawncard.dy > 0 and drawncard.y >= cardtargety then
+					drawncard.y = cardtargety
+					drawncard.dy = 0
+				elseif drawncard.dy < 0 and drawncard.y <= cardtargety then
+					drawncard.y = cardtargety
+					drawncard.dy = 0
 				end
-				debug=""
-				sfx(0)
-			elseif btnp(5) then
-				if checkvalidplay(player,cpu,player.hand[playercardptr]) then
-					debug=""
-					playcard(player,cpu,player.hand[playercardptr])
-					if playercardptr > #(player.hand) then
-						playercardptr-=1
-					end
-					turninprogress = false
-				else
-					debug = "invalid play: " .. player.hand[playercardptr].name
+				if drawncard.dx == 0 and drawncard.dy == 0 then
+					drawncard = nil
+					playedcard = nil
+					discardedcard = nil
+					playedcardtarget = nil
+					player.prevupcard = nil
+					cpu.prevupcard = nil
+					playinprogress = false
+					discardinprogress = false
+					turninprogress = true
+					drawupinprogress = false
 				end
-			elseif btnp(4) then
-				if player.hand[playercardptr].type == "f" then
-					debug = "don't discard that!"
-				else
-					discard(player,player.hand[playercardptr])
-					if playercardptr > #(player.hand) then
-						playercardptr-=1
-					end
-					turninprogress = false
-				end
+			else
+				drawncard = nil
+				playedcard = nil
+				discardedcard = nil
+				playedcardtarget = nil
+				player.prevupcard = nil
+				cpu.prevupcard = nil
+				playinprogress = false
+				discardinprogress = false
+				turninprogress = true
+				drawupinprogress = false
+			end
+		elseif discardinprogress then
+			discardedcard.x += discardedcard.dx
+			if discardedcard.dx < 0 and discardedcard.x <= cardtargetx then
+				discardedcard.x = cardtargetx
+				discardedcard.dx = 0
+			elseif discardedcard.dx > 0 and discardedcard.x >= cardtargetx then
+				discardedcard.x = cardtargetx
+				discardedcard.dx = 0
+			end
+			-- card could move up or down depending on type and player
+			discardedcard.y += discardedcard.dy
+			if discardedcard.dy > 0 and discardedcard.y >= cardtargety then
+				discardedcard.y = cardtargety
+				discardedcard.dy = 0
+			elseif discardedcard.dy < 0 and discardedcard.y <= cardtargety then
+				discardedcard.y = cardtargety
+				discardedcard.dy = 0
+			end
+			if discardedcard.dx == 0 and discardedcard.dy == 0 then
+				playedcard = nil
+				discardedcard = nil
+				playedcardtarget = nil
+				player.prevupcard = nil
+				cpu.prevupcard = nil
+				playinprogress = false
+				discardinprogress = false
+				turninprogress = false
+				drawupinprogress = false
+			end
+		elseif playinprogress then
+			-- card could move left or right depending on type
+			playedcard.x += playedcard.dx
+			if playedcard.dx < 0 and playedcard.x <= cardtargetx then
+				playedcard.x = cardtargetx
+				playedcard.dx = 0
+			elseif playedcard.dx > 0 and playedcard.x >= cardtargetx then
+				playedcard.x = cardtargetx
+				playedcard.dx = 0
+			end
+			-- card could move up or down depending on type and player
+			playedcard.y += playedcard.dy
+			if playedcard.dy > 0 and playedcard.y >= cardtargety then
+				playedcard.y = cardtargety
+				playedcard.dy = 0
+			elseif playedcard.dy < 0 and playedcard.y <= cardtargety then
+				playedcard.y = cardtargety
+				playedcard.dy = 0
+			end
+			if playedcard.dx == 0 and playedcard.dy == 0 then
+				playedcard = nil
+				discardedcard = nil
+				playedcardtarget = nil
+				player.prevupcard = nil
+				cpu.prevupcard = nil
+				playinprogress = false
+				discardinprogress = false
+				turninprogress = false
+				drawupinprogress = false
 			end
 		else
-			-- cpu skill level logic TODO:
-			---- 1 = normal (plays first playable card)
-			---- 0 = easy (plays to go/recover when possible)
-			---- 2 = hard (plays to stop player when possible)
-			for i=1,#(cpu.hand) do
-				if checkvalidplay(cpu,player,cpu.hand[i]) then
+			if currentplayer.name==player.name then
+				if btnp(1) then
+					playercardptr += 1
+					if playercardptr > #(player.hand) then
+						playercardptr = 1
+					end
 					debug=""
-					cpudebug="cpu plays "..cpu.hand[i].name
-					playcard(cpu,player,cpu.hand[i])
-					turninprogress = false
-					return
+					sfx(0)
+				elseif btnp(0) then
+					playercardptr -= 1
+					if playercardptr == 0 then
+						playercardptr = #(player.hand)
+					end
+					debug=""
+					sfx(0)
+				elseif btnp(5) then
+					if checkvalidplay(player,cpu,player.hand[playercardptr]) then
+						debug=""
+						playedcard = player.hand[playercardptr]
+						player.prevupcard = player.upcard
+						cpu.prevupcard = cpu.upcard
+						playcard(player,cpu,player.hand[playercardptr])
+						animatecard(playedcard,player,cpu)
+						if playercardptr > #(player.hand) then
+							playercardptr-=1
+						end
+						--turninprogress = false
+						playinprogress = true
+					else
+						debug = "invalid play: " .. player.hand[playercardptr].name
+					end
+				elseif btnp(4) then
+					if player.hand[playercardptr].type == "f" then
+						debug = "don't discard that!"
+					else
+						discard(player,player.hand[playercardptr])
+						if playercardptr > #(player.hand) then
+							playercardptr-=1
+						end
+						--turninprogress = false
+						discardinprogress = true
+					end
 				end
-			end
+			else
+				-- cpu skill level logic TODO:
+				---- 1 = normal (plays first playable card)
+				---- 0 = easy (plays to go/recover when possible)
+				---- 2 = hard (plays to stop player when possible)
+				for i=1,#(cpu.hand) do
+					if checkvalidplay(cpu,player,cpu.hand[i]) then
+						debug=""
+						cpudebug="cpu plays "..cpu.hand[i].name
+						playedcard = cpu.hand[i]
+						player.prevupcard = player.upcard
+						cpu.prevupcard = cpu.upcard
+						playcard(cpu,player,cpu.hand[i])
+						animatecard(playedcard,cpu,player)
+						--turninprogress = false
+						playinprogress = true
+						return
+					end
+				end
 		
-			-- cpu is unable to play, needs to discard
-			debug=""
-			cpudebug="cpu discards "..cpu.hand[1].name
-			discard(cpu,cpu.hand[1])
-			turninprogress = false
+				-- cpu is unable to play, needs to discard
+				debug=""
+				cpudebug="cpu discards "..cpu.hand[1].name
+				discard(cpu,cpu.hand[1])
+				--turninprogress = false
+				discardinprogress = true
+			end
 		end
 	end
 end
@@ -246,18 +388,6 @@ function draw_game()
 	cls()
 	print("player: "..player.score.." ("..player.total.." total)",5,5,player.col)
 	print("cpu:    "..cpu.score.." ("..cpu.total.." total)",5,45,cpu.col)
-	for i=1,#(player.hand) do
-		spr(player.hand[i].sprite,i*10+4,20)
-	end
-	if player.limit then
-		spr(21,94,20)
-	end
-	for i=1,#(cpu.hand) do
-		spr(20,i*10+4,60)
-	end
-	if cpu.limit then
-		spr(21,94,60)
-	end
 	rectfill(playerbox.x,playerbox.y,playerbox.xe,playerbox.ye,playerbox.col)
 	rectfill(playerptrbox.x,playerptrbox.y,playerptrbox.xe,playerptrbox.ye,playerptrbox.col)
 	rectfill(cpubox.x,cpubox.y,cpubox.xe,cpubox.ye,cpubox.col)
@@ -270,23 +400,73 @@ function draw_game()
 	if cpudebug != "" then
 		print(cpudebug,5,debugbox.y+2,10)
 	end
-	spr(20,100,78)
+	spr(20,deckx,decky)
 	print("="..#deck,109,80,10)
 	if debug != "" then
 		print(debug,5,playerbox.y+2,10)
 	else
-		if player.upcard ~= nil then
+		if player.prevupcard != nil and playedcard != nil and playedcardtarget != nil then
+			spr(player.prevupcard.sprite,playerbox.x+5,playerbox.y+2)
+		elseif player.prevupcard == nil and player.upcard ~= nil then
 			spr(player.upcard.sprite,playerbox.x+5,playerbox.y+2)
 		end
-		for i=1,#(player.safeties) do
+		numsafeties = #(player.safeties)
+		if playedcard != nil and playedcardtarget != nil and playedcardtarget.name == "player" and playedcard.type == "f" then
+			numsafeties -= 1
+		end
+		for i=1,numsafeties do
 			spr(player.safeties[i].sprite,playerbox.x+88+(10*(i-1)),playerbox.y+2)
 		end
 	end
-	if cpu.upcard ~= nil then
+	if cpu.prevupcard != nil and playedcard != nil and playedcardtarget != nil then
+		spr(cpu.prevupcard.sprite,cpubox.x+5,cpubox.y+2)
+	elseif cpu.prevupcard == nil and cpu.upcard ~= nil then
 		spr(cpu.upcard.sprite,cpubox.x+5,cpubox.y+2)
 	end
-	for i=1,#(cpu.safeties) do
+	numsafeties = #(cpu.safeties)
+	if playedcard != nil and playedcardtarget != nil and playedcardtarget.name == "cpu" and playedcard.type == "f" then
+		numsafeties -= 1
+		end
+	for i=1,numsafeties do
 		spr(cpu.safeties[i].sprite,cpubox.x+88+(10*(i-1)),cpubox.y+2)
+	end
+
+	if drawupinprogress and currentplayer.name == "player" then
+		for i=1,#(player.hand)-1 do
+			spr(player.hand[i].sprite,player.hand[i].x,player.hand[i].y)
+		end
+	else
+		for i=1,#(player.hand) do
+			spr(player.hand[i].sprite,player.hand[i].x,player.hand[i].y)
+		end
+	end
+	if (player.limit and (playedcard == nil or (playedcard != nil and (playedcardtarget.name != "player" or playedcard.type != "l")))) or (playedcard != nil and playedcardtarget != nil and playedcard.type == "v" and playedcardtarget.name == "player") then
+		spr(21,limitx,player.cardy)
+	end
+	if drawupinprogress and currentplayer.name == "cpu" then
+		for i=1,#(cpu.hand)-1 do
+			spr(20,cpu.hand[i].x,cpu.hand[i].y)
+		end
+	else
+		for i=1,#(cpu.hand) do
+			spr(20,cpu.hand[i].x,cpu.hand[i].y)
+		end
+	end
+	if (cpu.limit and (playedcard == nil or (playedcard != nil and (playedcardtarget.name != "cpu" or playedcard.type != "l")))) or (playedcard != nil and playedcardtarget != nil and playedcard.type == "v" and playedcardtarget.name == "cpu") then
+		spr(21,limitx,cpu.cardy)
+	end
+	if playedcard != nil then
+		spr(playedcard.sprite,playedcard.x,playedcard.y)
+	end
+	if discardedcard != nil then
+		spr(discardedcard.sprite,discardedcard.x,discardedcard.y)
+	end
+	if drawupinprogress then
+		if currentplayer.name == "player" then
+			spr(drawncard.sprite,drawncard.x,drawncard.y)
+		else
+			spr(20,drawncard.x,drawncard.y)
+		end
 	end
 end
 -->8
@@ -313,6 +493,8 @@ function newrace()
 	cpu.limit=false
 	player.upcard=nil
 	cpu.upcard=nil
+	player.prevupcard=nil
+	cpu.prevupcard=nil
 	playercardptr=1
 	currentplayer = {name="nobody"}
 	turninprogress = false
@@ -323,24 +505,103 @@ function newrace()
 end
 
 function draw_up(_curplayer,_cf)
-	add(_curplayer.hand,deck[1])
-	del(deck,deck[1])	
 	if _cf then
 		-- after coup foure, we draw two
-		add(_curplayer.hand,deck[1])
-		del(deck,deck[1])	
+		card = deck[1]
+		if card != nil then
+			card.x = 64 -- card 6 times 10 plus 4
+			card.y = _curplayer.cardy
+			add(_curplayer.hand,card)
+			del(deck,card)
+		end
 	end
---	return _curplayer
+	card = deck[1]
+	if card != nil then
+		card.x = 74 -- card 7 times 10 plus 4
+		card.y = _curplayer.cardy
+		drawncard = clonecard(card)
+		drawncard.x = deckx
+		drawncard.y = decky
+		cardtargetx = card.x
+		cardtargety = card.y
+		drawncard.dx = cardplayspeed * (cardtargetx - drawncard.x)
+		drawncard.dy = cardplayspeed * (cardtargety - drawncard.y)
+		add(_curplayer.hand,card)
+		del(deck,card)
+	end
 end
 
 function discard(_player,_card)
+	discardedcard = clonecard(_card)
+	cardtargetx = -5
+	cardtargety = -5
+	discardedcard.dx = cardplayspeed * (cardtargetx - discardedcard.x)
+	discardedcard.dy = cardplayspeed * (cardtargety - discardedcard.y)
 	del(_player.hand,_card)
+	recalculatehandpos(_player)
 end
 
-function dealto(_player)
+function dealto(_player,_cardnum)
 	card = deck[1]
+	card.x = _cardnum * 10 + 4
+	card.y = _player.cardy
 	add(_player.hand,card)
 	del(deck,deck[1])
+end
+
+function cheatdealto(_player)
+	-- search the deck for safeties!
+	cn = 1
+	for i=#deck,1,-1 do
+		card = deck[i]
+		if _player.name == "player" and #(_player.safeties) < 4 and card.type == "f" then
+			card.x = cn * 10 + 4
+			cn += 1
+			card.y = _player.cardy
+			add(_player.hand,card)
+			del(deck,deck[i])
+		end		
+	end
+	for i=1,2 do
+		card = deck[1]
+		card.x = cn * 10 + 4
+		cn += 1
+		card.y = _player.cardy
+		add(_player.hand,card)
+		del(deck,deck[1])
+	end
+end
+
+function recalculatehandpos(_curplayer)
+	for i=1,#(_curplayer.hand) do
+		_curplayer.hand[i].x = i*10+4
+	end
+end
+
+function animatecard(_card,_cardplayer,_otherplayer)
+	if _card.type == "n" or _card.type == "g" or _card.type == "r" or (_card.type == "f" and _card.name != "emergency" and _cardplayer.upcard != nil and _cardplayer.upcard.safety == _card.name) then
+		cardtargetx = _cardplayer.box.x + 5
+		cardtargety = _cardplayer.box.y + 2
+		playedcardtarget = _cardplayer
+	elseif _card.type == "s" or _card.type == "h" then
+		cardtargetx = _otherplayer.box.x + 5
+		cardtargety = _otherplayer.box.y + 2
+		playedcardtarget = _otherplayer
+	elseif _card.type == "v" then
+		cardtargetx = limitx
+		cardtargety = _cardplayer.cardy
+		playedcardtarget = _cardplayer
+	elseif _card.type == "l" then
+		cardtargetx = limitx
+		cardtargety = _otherplayer.cardy
+		playedcardtarget = _otherplayer
+	elseif _card.type == "f" then
+		cardtargetx = _cardplayer.box.x + 88 + (10 * (#(_cardplayer.safeties) - 1))
+		cardtargety = _cardplayer.box.y + 2
+		playedcardtarget = _cardplayer
+	end
+	_card.dx = cardplayspeed * (cardtargetx - _card.x)
+	_card.dy = cardplayspeed * (cardtargety - _card.y)
 end
 
 function hassafety(_player,_safety)
@@ -469,6 +730,7 @@ function playcard(_player,_opponent,_card)
 		_player.upcard = clonecard(_card)
 	end
 	del(_player.hand,_card)
+	recalculatehandpos(_player)
 end
 
 function ismatchwon()
@@ -502,47 +764,93 @@ function isracewon()
 	else
 		return ""
 	end
+	
+	-- TODO: don't add points to total here, we may call extension!
+	playerraceoverpoints = 0
+	cpuraceoverpoints = 0
+
 	player.total += player.score
+	playerraceoverpoints += player.score
 	player.total += #(player.safeties) * 100
+	playerraceoverpoints += #(player.safeties) * 100
 	if #(player.safeties) == 4 then
 		player.total += 400
+		playerraceoverpoints += 400
 	end
 	cpu.total += cpu.score
+	cpuraceoverpoints += cpu.score
 	cpu.total += #(cpu.safeties) * 100
+	cpuraceoverpoints += #(cpu.safeties) * 100
 	if #(cpu.safeties) == 4 then
 		cpu.total += 400
+		cpuraceoverpoints += 400
 	end
 	
-	if winner.name ~= "draw" then
+	if winner.name == "player" then
 		-- race winner gets 400 points
 		winner.total += 400
+		playerraceoverpoints += 400
 	
 		if loser.score == 0 then
 			-- shutout, 500 points
 			winner.total += 500
+			playerraceoverpoints += 500
 		end
 
 		if #deck == 0 then
 			-- delayed action, 300 points
 			winner.total += 300
+			playerraceoverpoints += 300
 		end
 	
 		if winner.num200s == 0 then
 			-- safe trip, 300 points
 			winner.total += 300
+			playerraceoverpoints += 300
+		end
+		
+		if curgoal == extgoal then
+			-- extension, 200 points
+			winner.total += 200
+			playerraceoverpoints += 200
+		end
+		-- TODO: coup fourre, 300 points each
+	elseif winner.name == "cpu" then
+		-- race winner gets 400 points
+		winner.total += 400
+		cpuraceoverpoints += 400
+	
+		if loser.score == 0 then
+			-- shutout, 500 points
+			winner.total += 500
+			cpuraceoverpoints += 500
+		end
+
+		if #deck == 0 then
+			-- delayed action, 300 points
+			winner.total += 300
+			cpuraceoverpoints += 300
 		end
 	
-		-- TODO: extension, 200 points
+		if winner.num200s == 0 then
+			-- safe trip, 300 points
+			winner.total += 300
+			cpuraceoverpoints += 300
+		end
+		
+		if curgoal == extgoal then
+			-- extension, 200 points
+			winner.total += 200
+			cpuraceoverpoints += 200
+		end
 		-- TODO: coup fourre, 300 points each
 	end
 	
-	--player.score = 0
-	--cpu.score = 0
 	return winner.name
 end
 
 function clonecard(_card)
-	return {type=_card.type,value=_card.value,belowlimit=_card.belowlimit,name=_card.name,remedy=_card.remedy,safety=_card.safety,sprite=_card.sprite}
+	return {type=_card.type,value=_card.value,belowlimit=_card.belowlimit,name=_card.name,remedy=_card.remedy,safety=_card.safety,sprite=_card.sprite,x=_card.x,y=_card.y}
 end
 __gfx__
 000000006666666666666666666666666666666666666666bbbbbbbb88888888888888888888888888888888bbbbbbbb88888888cccccccccccccccccccccccc
