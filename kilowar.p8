@@ -31,8 +31,9 @@ function _init()
 	playedcard = nil
 	playedcardtarget = nil
 	discardedcard = nil
+	cancf = false
 	drawncard = nil
-	cardplayspeed = 0.02
+	cardplayspeed = 0.03
 	mode = "start"
 	playercardptr = 1
 	deckx = 100
@@ -71,45 +72,45 @@ function shuffledeck()
 	for i=1,14 do
 		-- add number cards
 		if i <= 10 then
-			add(_d,{type="n",value=25,belowlimit=true,name="25",remedy="",safety="",sprite=1,x=-1,y=-1})
-			add(_d,{type="n",value=50,belowlimit=true,name="50",remedy="",safety="",sprite=2,x=-1,y=-1})
-			add(_d,{type="n",value=75,belowlimit=false,name="75",remedy="",safety="",sprite=3,x=-1,y=-1})
+			add(_d,{type="n",value=25,belowlimit=true,name="25",remedy="",safety="",sprite=1,x=-1,y=-1,fx=1})
+			add(_d,{type="n",value=50,belowlimit=true,name="50",remedy="",safety="",sprite=2,x=-1,y=-1,fx=1})
+			add(_d,{type="n",value=75,belowlimit=false,name="75",remedy="",safety="",sprite=3,x=-1,y=-1,fx=1})
 		end
 		if i <= 12 then
-			add(_d,{type="n",value=100,belowlimit=false,name="100",remedy="",safety="",sprite=4,x=-1,y=-1})
+			add(_d,{type="n",value=100,belowlimit=false,name="100",remedy="",safety="",sprite=4,x=-1,y=-1,fx=1})
 		end
 
 		if i <=4 then
-			add(_d,{type="n",value=200,belowlimit=false,name="200",remedy="",safety="",sprite=5,x=-1,y=-1})
+			add(_d,{type="n",value=200,belowlimit=false,name="200",remedy="",safety="",sprite=5,x=-1,y=-1,fx=1})
 		end
 		-- add go cards
-		add(_d,{type="g",value=0,belowlimit=false,name="go",remedy="",safety="",sprite=6,x=-1,y=-1})
+		add(_d,{type="g",value=0,belowlimit=false,name="go",remedy="",safety="",sprite=6,x=-1,y=-1,fx=7})
 		-- add stop cards
 		if i <=5 then
-			add(_d,{type="s",value=0,belowlimit=false,name="stop",remedy="",safety="emergency",sprite=7,x=-1,y=-1})
+			add(_d,{type="s",value=0,belowlimit=false,name="stop",remedy="",safety="emergency",sprite=7,x=-1,y=-1,fx=6})
 		end
 		-- add hazards + speed limits
 		if i <= 3 then
-			add(_d,{type="h",value=0,belowlimit=false,name="flat",remedy="spare",safety="ppt",sprite=8,x=-1,y=-1})
-			add(_d,{type="h",value=0,belowlimit=false,name="crash",remedy="repair",safety="ace",sprite=9,x=-1,y=-1})
-			add(_d,{type="h",value=0,belowlimit=false,name="empty",remedy="gascan",safety="tanker",sprite=10,x=-1,y=-1})
+			add(_d,{type="h",value=0,belowlimit=false,name="flat",remedy="spare",safety="ppt",sprite=8,x=-1,y=-1,fx=4})
+			add(_d,{type="h",value=0,belowlimit=false,name="crash",remedy="repair",safety="ace",sprite=9,x=-1,y=-1,fx=3})
+			add(_d,{type="h",value=0,belowlimit=false,name="empty",remedy="gascan",safety="tanker",sprite=10,x=-1,y=-1,fx=5})
 		end
 		if i <= 4 then
-			add(_d,{type="l",value=0,belowlimit=false,name="limit 50",remedy="nolimit",safety="emergency",sprite=12,x=-1,y=-1})
+			add(_d,{type="l",value=0,belowlimit=false,name="limit 50",remedy="nolimit",safety="emergency",sprite=12,x=-1,y=-1,fx=1})
 		end
 		-- add remedies + remove limits
 		if i <= 6 then
-			add(_d,{type="v",value=0,belowlimit=false,name="nolimit",remedy="",safety="emergency",sprite=11,x=-1,y=-1})
-			add(_d,{type="r",value=0,belowlimit=false,name="gascan",remedy="",safety="",sprite=17,x=-1,y=-1})
-			add(_d,{type="r",value=0,belowlimit=false,name="repair",remedy="",safety="",sprite=18,x=-1,y=-1})
-			add(_d,{type="r",value=0,belowlimit=false,name="spare",remedy="",safety="",sprite=19,x=-1,y=-1})
+			add(_d,{type="v",value=0,belowlimit=false,name="nolimit",remedy="",safety="emergency",sprite=11,x=-1,y=-1,fx=1})
+			add(_d,{type="r",value=0,belowlimit=false,name="gascan",remedy="",safety="",sprite=17,x=-1,y=-1,fx=1})
+			add(_d,{type="r",value=0,belowlimit=false,name="repair",remedy="",safety="",sprite=18,x=-1,y=-1,fx=1})
+			add(_d,{type="r",value=0,belowlimit=false,name="spare",remedy="",safety="",sprite=19,x=-1,y=-1,fx=1})
 		end
 		-- add safeties
 		if i == 1 then
-			add(_d,{type="f",value=0,belowlimit=false,name="ppt",remedy="",safety="",sprite=13,x=-1,y=-1})
-			add(_d,{type="f",value=0,belowlimit=false,name="tanker",remedy="",safety="",sprite=14,x=-1,y=-1})
-			add(_d,{type="f",value=0,belowlimit=false,name="ace",remedy="",safety="",sprite=15,x=-1,y=-1})
-			add(_d,{type="f",value=0,belowlimit=false,name="emergency",remedy="",safety="",sprite=16,x=-1,y=-1})
+			add(_d,{type="f",value=0,belowlimit=false,name="ppt",remedy="",safety="",sprite=13,x=-1,y=-1,fx=1})
+			add(_d,{type="f",value=0,belowlimit=false,name="tanker",remedy="",safety="",sprite=14,x=-1,y=-1,fx=1})
+			add(_d,{type="f",value=0,belowlimit=false,name="ace",remedy="",safety="",sprite=15,x=-1,y=-1,fx=1})
+			add(_d,{type="f",value=0,belowlimit=false,name="emergency",remedy="",safety="",sprite=16,x=-1,y=-1,fx=8})
 		end
 	end
 	
@@ -383,6 +384,7 @@ function update_game()
 						if playercardptr > #(player.hand) then
 							playercardptr-=1
 						end
+						sfx(playedcard.fx)
 						playinprogress = true
 					else
 						debug = "invalid play: " .. player.hand[playercardptr].name
@@ -395,6 +397,7 @@ function update_game()
 						if playercardptr > #(player.hand) then
 							playercardptr-=1
 						end
+						sfx(2)
 						discardinprogress = true
 					end
 				end
@@ -412,6 +415,7 @@ function update_game()
 						cpu.prevupcard = cpu.upcard
 						playcard(cpu,player,cpu.hand[i])
 						animatecard(playedcard,cpu,player)
+						sfx(playedcard.fx)
 						playinprogress = true
 						return
 					end
@@ -421,6 +425,7 @@ function update_game()
 				debug=""
 				cpudebug="cpu discards "..cpu.hand[1].name
 				discard(cpu,cpu.hand[1])
+				sfx(2)
 				discardinprogress = true
 			end
 		end
@@ -773,9 +778,11 @@ end
 
 function playcard(_player,_opponent,_card)
 	-- do we play this card on ourselves or opponent?
-	if _card.type == "h" or _card.type == "s" then
+	if _card.type == "h" or _card.type == "s" then 
+		cancf = checkforcf(_opponent.hand,_card)
 		_opponent.upcard = clonecard(_card)
 	elseif _card.type == "l" then
+		cancf = checkforcf(_opponent.hand,_card)
 		_opponent.limit = true
 	elseif _card.type == "n" then
 		_player.upcard = clonecard(_card)
@@ -802,6 +809,16 @@ function playcard(_player,_opponent,_card)
 	end
 	del(_player.hand,_card)
 	recalculatehandpos(_player)
+end
+
+function checkforcf(_hand,_card)
+	for i=1,#_hand do
+		if _hand[i].name == _card.safety then
+			return true
+		end
+	end
+
+	return false
 end
 
 function ismatchwon()
@@ -905,7 +922,7 @@ function isracewon()
 end
 
 function clonecard(_card)
-	return {type=_card.type,value=_card.value,belowlimit=_card.belowlimit,name=_card.name,remedy=_card.remedy,safety=_card.safety,sprite=_card.sprite,x=_card.x,y=_card.y}
+	return {type=_card.type,value=_card.value,belowlimit=_card.belowlimit,name=_card.name,remedy=_card.remedy,safety=_card.safety,sprite=_card.sprite,x=_card.x,y=_card.y,fx=_card.fx}
 end
 __gfx__
 000000006666666666666666666666666666666666666666bbbbbbbb88888888888888888888888888888888bbbbbbbb88888888cccccccccccccccccccccccc
@@ -965,4 +982,12 @@ eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000000000000000000000
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000000000000000000000000000000000000000000000000000000000000000000000
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000000000000000000000000000000000000000000000000000000000000000000000
 __sfx__
-0001000007570095700b5700050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500
+0001000007550095500b5502000000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500
+0005000007750087500c75010750147501b750257502c750007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700
+0005000029250242501e25017250142501a2502425000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0010000026650206501a6501363005630056200562004610046100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000400000c55009550065500365002650006500065000650006300063000620006200061000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+002000002c0502c0102c0102c0002c0502c0102c0102c0002c0502c0102c0102c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000002c5502a5502855026550235501f5501b550175501f5000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500
+0010000016550185501b5501e550205502255024550265501f5000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500
+001800002425024250182501825024250242501825018250000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
