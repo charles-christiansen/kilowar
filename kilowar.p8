@@ -6,14 +6,15 @@ __lua__
 --TODO:
 ----4. finish coup fourre!
 -------- cpu play
--------- animate both cards drawing
 -------- rotate safety cards?
 ----5. finish race over screen showing points earned
 -------- handle draw condition
 -------- display scores in correct player colors
-----6. w-l record save/clear
-----7. better sprites
-----8. card legend screen
+----6. match over screen
+----7. difficulty levels
+----8. w-l record save/clear
+----9. better sprites
+---10. card legend screen
 
 function _init()
 	deck = shuffledeck()
@@ -41,6 +42,7 @@ function _init()
 	iscf = false
 	cancfcard = nil
 	drawncard = nil
+	multidraw = false
 	cardplayspeed = 0.01
 	mode = "start"
 	playercardptr = 1
@@ -292,12 +294,19 @@ function update_game()
 	
 		if not turninprogress and not drawupinprogress then
 			playinprogress = false
-			if currentplayer.name==player.name then
-				currentplayer = cpu
-			else
-				currentplayer = player
+			if not multidraw then
+				if currentplayer.name==player.name then
+					currentplayer = cpu
+				else
+					currentplayer = player
+				end
 			end
 			draw_up(currentplayer,iscf)
+			if iscf then
+				multidraw = true
+			else
+				multidraw = false
+			end
 			drawupinprogress = true
 			cancf = false
 			iscf = false
@@ -330,7 +339,9 @@ function update_game()
 					cpu.prevupcard = nil
 					playinprogress = false
 					discardinprogress = false
-					turninprogress = true
+					if not multidraw then
+						turninprogress = true
+					end
 					drawupinprogress = false
 				end
 			else
@@ -682,19 +693,9 @@ function newrace()
 end
 
 function draw_up(_curplayer,_cf)
-	if _cf then
-		-- after coup foure, we draw two
-		card = deck[1]
-		if card != nil then
-			card.x = 64 -- card 6 times 10 plus 4
-			card.y = _curplayer.cardy
-			add(_curplayer.hand,card)
-			del(deck,card)
-		end
-	end
 	card = deck[1]
 	if card != nil then
-		card.x = 74 -- card 7 times 10 plus 4
+		card.x = (#_curplayer.hand + 1) * 10 + 4
 		card.y = _curplayer.cardy
 		drawncard = clonecard(card)
 		drawncard.x = deckx
