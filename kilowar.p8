@@ -4,17 +4,13 @@ __lua__
 --init functions
 
 --TODO:
-----4. finish coup fourre!
--------- cpu play
--------- rotate safety cards?
-----5. finish race over screen showing points earned
+----2. finish race over screen showing points earned
 -------- handle draw condition
 -------- display scores in correct player colors
-----6. match over screen
-----7. difficulty levels
-----8. w-l record save/clear
-----9. better sprites
----10. card legend screen
+----4. difficulty levels
+----5. w-l record save/clear
+----6. better sprites
+----7. card legend screen
 
 function _init()
 	deck = shuffledeck()
@@ -43,7 +39,8 @@ function _init()
 	cancfcard = nil
 	drawncard = nil
 	multidraw = false
-	cardplayspeed = 0.01
+	safetyplay = 0
+	cardplayspeed = 0.025
 	mode = "start"
 	playercardptr = 1
 	deckx = 100
@@ -74,8 +71,9 @@ function _init()
 	windelay = 0
 	winsafe = 0
 	winext = 0
+	wincol = 7
 	
-	cheat = true
+	cheat = false
 	palt(14,true)
 	palt(0,false)
 end
@@ -152,6 +150,8 @@ function _update60()
 		update_start()
 	elseif mode == "raceover" then
 		update_raceover()
+	elseif mode == "matchover" then
+		update_matchover()
 	else
 		update_game()
 	end
@@ -170,28 +170,22 @@ function update_raceover()
 	end
 end
 
+function update_matchover()
+	if btnp(5) then
+		newmatch()
+		mode = "game"
+	end
+end
+
 function update_game()
 	-- check for race win condition
 	if #racewinner == 0 and not drawupinprogress and not turninprogress and not playinprogress and not discardinprogress then
 		racewinner = isracewon()
 	end
 	if matchover then
-		debug = "*** "..matchwinner.." wins the match ***"
-		cpudebug = "press ❎ to start a new match!"
-		if btnp(5) then
-			newmatch()
-		end
+		mode = "matchover"
 	elseif raceover then
 		mode = "raceover"
---		if racewinner == "draw" then
---			debug = "nobody finished the race"
---		else
---			debug = racewinner.." wins!"
---		end
---		cpudebug = "press ❎ to start the next race!"
---		if btnp(5) then
---			newrace()
---		end
 	elseif #racewinner > 0 then
 		if curgoal == stdgoal then
 			if racewinner == "player" then
@@ -280,15 +274,29 @@ function update_game()
 		end
 		
 		if cancf then
-			cpudebug = "⬆️ to coup fourre!"
-			if btnp(2) then
-				playcoupfourre(player,cpu)
-				playinprogress = false
-				turninprogress = false
-				cancf = false
-				iscf = true
+			if currentplayer.name==player.name then
+				-- cpu can coup fourre
+				-- cpu will call it 75% of the time
+				if flr(rnd(100))+1 > 25 then
+					cpudebug = "~~~~~coup fourre!~~~~~"
+					playcoupfourre(cpu,player)
+					playinprogress = false
+					turninprogress = false
+					cancf = false
+					iscf = true
+				end
+			else
+				-- player can coup fourre
+				cpudebug = "⬆️ to coup fourre!"
+				if btnp(2) then
+					playcoupfourre(player,cpu)
+					playinprogress = false
+					turninprogress = false
+					cancf = false
+					iscf = true
+				end
 			end
-		else
+		elseif cpudebug != "~~~~~coup fourre!~~~~~" then
 			cpudebug = ""
 		end
 	
@@ -301,7 +309,7 @@ function update_game()
 					currentplayer = player
 				end
 			end
-			draw_up(currentplayer,iscf)
+			draw_up(currentplayer)
 			if iscf then
 				multidraw = true
 			else
@@ -415,6 +423,9 @@ function update_game()
 				turninprogress = false
 				drawupinprogress = false
 			end
+			if not cancf then
+				cpudebug = ""
+			end
 		else
 			if currentplayer.name==player.name then
 				if btnp(1) then
@@ -423,27 +434,26 @@ function update_game()
 						playercardptr = 1
 					end
 					debug=""
-					sfx(0)
+					--sfx(0)
 				elseif btnp(0) then
 					playercardptr -= 1
 					if playercardptr == 0 then
 						playercardptr = #(player.hand)
 					end
 					debug=""
-					sfx(0)
+					--sfx(0)
 				elseif btnp(5) then
 					if checkvalidplay(player,cpu,player.hand[playercardptr]) then
 						debug=""
 						playedcard = player.hand[playercardptr]
 						player.prevupcard = player.upcard
 						cpu.prevupcard = cpu.upcard
-						cancf = checkforcf(cpu.hand,playedcard)
 						playcard(player,cpu,player.hand[playercardptr])
 						animatecard(playedcard,player,cpu)
 						if playercardptr > #(player.hand) then
 							playercardptr-=1
 						end
-						sfx(playedcard.fx)
+						--sfx(playedcard.fx)
 						playinprogress = true
 					else
 						debug = "invalid play: " .. player.hand[playercardptr].name
@@ -456,7 +466,7 @@ function update_game()
 						if playercardptr > #(player.hand) then
 							playercardptr-=1
 						end
-						sfx(2)
+						--sfx(2)
 						discardinprogress = true
 					end
 				end
@@ -467,26 +477,51 @@ function update_game()
 				---- 2 = hard (plays to stop player when possible)
 				for i=1,#(cpu.hand) do
 					if checkvalidplay(cpu,player,cpu.hand[i]) then
-						debug=""
-						--cpudebug="cpu plays "..cpu.hand[i].name
-						playedcard = cpu.hand[i]
-						player.prevupcard = player.upcard
-						cpu.prevupcard = cpu.upcard
-						--cancf = checkforcf(player.hand,playedcard)
-						playcard(cpu,player,cpu.hand[i])
-						animatecard(playedcard,cpu,player)
-						sfx(playedcard.fx)
-						playinprogress = true
-						return
+						if cpu.hand[i].type == "f" and ((player.score < 600 and curgoal == stdgoal) or (player.score < 900 and curgoal == extgoal) or #deck == 0) then
+							safetyplay = i
+						else
+							debug=""
+							playedcard = cpu.hand[i]
+							player.prevupcard = player.upcard
+							cpu.prevupcard = cpu.upcard
+							playcard(cpu,player,cpu.hand[i])
+							animatecard(playedcard,cpu,player)
+							--sfx(playedcard.fx)
+							safetyplay = 0
+							playinprogress = true
+							return
+						end
 					end
 				end
-		
-				-- cpu is unable to play, needs to discard
-				debug=""
-				--cpudebug="cpu discards "..cpu.hand[1].name
-				discard(cpu,cpu.hand[1])
-				sfx(2)
-				discardinprogress = true
+				
+				-- we'll favor discarding over playing a safety
+				-- for the first half of the deck unless the upcard
+				-- is the matching hazard
+				-- otherwise save them for coup fourre!
+				if safetyplay > 0 and ((cpu.upcard != nil and cpu.upcard.safety == cpu.hand[safetyplay].name) or #deck < 53) then
+					debug=""
+					playedcard = cpu.hand[safetyplay]
+					player.prevupcard = player.upcard
+					cpu.prevupcard = cpu.upcard
+					playcard(cpu,player,cpu.hand[safetyplay])
+					animatecard(playedcard,cpu,player)
+					--sfx(playedcard.fx)
+					safetyplay = 0
+					playinprogress = true
+				else
+					-- cpu is unable to play, needs to discard
+					debug=""
+					if #cpu.hand > 0 then
+						for i=1,#(cpu.hand) do
+							if cpu.hand[i].type != "f" or #cpu.hand < 5 then
+								discard(cpu,cpu.hand[i])
+								break
+							end
+						end
+						--sfx(2)
+						discardinprogress = true
+					end
+				end
 			end
 		end
 	end
@@ -498,29 +533,72 @@ function _draw()
 		draw_start()
 	elseif mode == "raceover" then
 		draw_raceover()
+	elseif mode == "matchover" then
+		draw_matchover()
 	else
 		draw_game()
 	end
 end
 
+function draw_matchover()
+	cls()
+	print("***** "..matchwinner.." wins the match! *****",5,5,7)
+	print("final scores",25,25,7)
+	if matchwinner == "player" then
+		print("player: "..player.total,5,35,player.col)
+		print("cpu: "..cpu.total,5,43,cpu.col)
+	else
+		print("cpu: "..cpu.total,5,35,cpu.col)
+		print("player: "..player.total,5,43,player.col)
+	end
+	print("press ❎ to start a new match!",5,63,4)
+end
+
 function draw_raceover()
 	cls()
-	print(winname.." wins!",5,5,7)
-	print("kilos: "..winscore,5,13,7)
-	print("win bonus: "..winpts,5,21,7)
-	print("safeties: "..winsft,5,29,7)
-	print("coup fourre: "..wincfs,5,37,7)
-	print("all 4 safeties: "..winall4,5,45,7)
-	print("shutout: "..winshut,5,53,7)
-	print("delayed win: "..windelay,5,61,7)
-	print("safe trip: "..winsafe,5,69,7)
-	print("extension: "..winext,5,77,7)
-	if winname == "player" then
-		print("=====race total: "..playerraceoverpoints.."=====",5,90,7)
+	if winname != "draw" then
+		print(winname.." wins!",5,5,wincol)
+		print("kilos: "..winscore,5,13,wincol)
+		print("win bonus: "..winpts,5,21,wincol)
+		print("safeties: "..winsft,5,29,wincol)
+		print("coup fourre: "..wincfs,5,37,wincol)
+		print("all 4 safeties: "..winall4,5,45,wincol)
+		print("shutout: "..winshut,5,53,wincol)
+		print("delayed win: "..windelay,5,61,wincol)
+		print("safe trip: "..winsafe,5,69,wincol)
+		print("extension: "..winext,5,77,wincol)
 	else
-		print("=====race total: "..cpuraceoverpoints.."=====",5,90,7)
+		print("nobody won the race",5,5,wincol)
+		print("player kilos: "..player.score,5,13,player.col)
+		print("cpu kilos: "..cpu.score,5,21,cpu.col)
+		print("player safeties: "..#(player.safeties)*100,5,29,player.col)
+		print("cpu safeties: "..#(cpu.safeties)*100,5,37,cpu.col)
+		print("player coup fourre: "..player.cfs*300,5,45,player.col)
+		print("cpu coup fourre: "..cpu.cfs*300,5,53,cpu.col)
+		if #player.safeties == 4 then
+			print("player all safeties: 400",5,61,player.col)
+		else
+			print("player all safeties: 0",5,61,player.col)
+		end
+		if #cpu.safeties == 4 then
+			print("cpu all safeties: 400",5,69,cpu.col)
+		else
+			print("cpu all safeties: 0",5,69,cpu.col)
+		end
+		if calledext == "cpu" then
+			print("player extension stop: 200",5,77,player.col)
+		else
+			print("player extension stop: 0",5,77,player.col)
+		end
+		if calledext == "player" then
+			print("cpu extension stop: 200",5,85,cpu.col)
+		else
+			print("cpu extension stop: 0",5,85,cpu.col)
+		end
 	end
-	print("press ❎ for next race!",5,100,4)
+	print("=====player race total: "..playerraceoverpoints.."=====",5,93,player.col)
+	print("=====cpu race total: "..cpuraceoverpoints.."=====",5,103,cpu.col)
+	print("press ❎ for next race!",5,113,4)
 end
 
 function draw_start()
@@ -584,11 +662,11 @@ function draw_game()
 		if cpu.safeties[i].iscf then
 			pal(12,7)
 			pal(15,9)
-		else
---			pal(7,12)
---			pal(9,15)
 		end		
 		spr(cpu.safeties[i].sprite,cpubox.x+88+(10*(i-1)),cpubox.y+2)
+		pal()
+		palt(14,true)
+		palt(0,false)
 	end
 	pal()
 	palt(14,true)
@@ -669,6 +747,8 @@ function newrace()
 	playedcardtarget = nil
 	discardedcard = nil
 	drawncard = nil
+	multidraw = false
+	safetyplay = 0
 	deck=shuffledeck()
 	debug=""
 	cpudebug=""
@@ -679,6 +759,7 @@ function newrace()
 	curgoal=stdgoal
 	calledext="nobody"
 	cancf = false
+	iscf = false
 	cancfcard = nil
 	winname = ""
 	winscore = 0
@@ -690,9 +771,10 @@ function newrace()
 	windelay = 0
 	winsafe = 0
 	winext = 0
+	wincol = 7
 end
 
-function draw_up(_curplayer,_cf)
+function draw_up(_curplayer)
 	card = deck[1]
 	if card != nil then
 		card.x = (#_curplayer.hand + 1) * 10 + 4
@@ -890,7 +972,7 @@ function playcard(_player,_opponent,_card)
 		_player.upcard = clonecard(_card)
 		-- add value to player's score
 		_player.score += _player.upcard.value
-		if _player.upcard.value == 200 then
+		if _card.value == 200 then
 			_player.num200s+=1
 		end
 	elseif _card.type == "f" then
@@ -904,6 +986,8 @@ function playcard(_player,_opponent,_card)
 		end
 		-- add card to player safeties
 		add(_player.safeties,clonecard(_card))
+		-- same player goes again!
+		multidraw = true
 	elseif _card.type == "v" then
 		_player.limit = false
 	elseif _card.type == "g" or _card.type == "r" then
@@ -914,27 +998,30 @@ function playcard(_player,_opponent,_card)
 end
 
 function playcoupfourre(_player,_opponent)
-	-- for coup fourres, we:
-	---- remove played card
-	---- revert to previous upcard
-	---- palette swap safety card colors
-	---- add card to safeties
-	---- add one to cfs total
-	---- end turn
-	card = nil
-	for i=1,#_player.hand do
-		if _player.hand[i].name == playedcard.safety then
-			card = _player.hand[i]
+	-- possible race condition where
+	-- the played card gets to its
+	-- destination as coup fourre
+	-- is being played, so check for nil
+	-- before doing anything
+	if playedcard != nil then
+		card = nil
+		for i=1,#_player.hand do
+			if _player.hand[i].name == playedcard.safety then
+				card = _player.hand[i]
+			end
+		end
+		playedcard = nil
+		_player.upcard = _player.prevupcard
+		_player.prevupcard = nil
+		card.iscf = true
+		add(_player.safeties,clonecard(card))
+		del(_player.hand,card)
+		recalculatehandpos(_player)
+		_player.cfs += 1
+		if card.name == "emergency" then
+			_player.limit = false
 		end
 	end
-	playedcard = nil
-	_player.upcard = _player.prevupcard
-	_player.prevupcard = nil
-	card.iscf = true
-	add(_player.safeties,clonecard(card))
-	del(_player.hand,card)
-	recalculatehandpos(_player)
-	_player.cfs += 1
 end
 
 function checkforcf(_hand,_card)
@@ -983,6 +1070,16 @@ function isracewon()
 	-- We calculate but don't add points to total here, we may call extension!
 	playerraceoverpoints = 0
 	cpuraceoverpoints = 0
+	winname = ""
+	winscore = 0
+	winsft = 0
+	wincfs = 0
+	winall4 = 0
+	winpts = 0
+	winshut = 0
+	windelay = 0
+	winsafe = 0
+	winext = 0
 
 	playerraceoverpoints += player.score
 	playerraceoverpoints += #(player.safeties) * 100
@@ -998,13 +1095,13 @@ function isracewon()
 	end
 	if winner.name == "player" then
 		winname = "player"
+		wincol = player.col
 		winscore = player.score
 		winsft = #(player.safeties) * 100
 		wincfs = player.cfs * 300
 		if #(player.safeties) == 4 then
 			winall4 = 400
 		end
-		winpts = 400
 
 		-- race winner gets 400 points
 		playerraceoverpoints += 400
@@ -1034,31 +1131,47 @@ function isracewon()
 			winext = 200
 		end
 	elseif winner.name == "cpu" then
+		winname = "cpu"
+		wincol = cpu.col
+		winscore = cpu.score
+		winsft = #(cpu.safeties) * 100
+		wincfs = cpu.cfs * 300
+		if #(cpu.safeties) == 4 then
+			winall4 = 400
+		end
+
 		-- race winner gets 400 points
 		cpuraceoverpoints += 400
+		winpts = 400
 	
 		if loser.score == 0 then
 			-- shutout, 500 points
 			cpuraceoverpoints += 500
+			winshut = 500
 		end
 
 		if #deck == 0 then
 			-- delayed action, 300 points
 			cpuraceoverpoints += 300
+			windelay = 300
 		end
 	
 		if winner.num200s == 0 then
 			-- safe trip, 300 points
 			cpuraceoverpoints += 300
+			winsafe = 300
 		end
 		
 		if curgoal == extgoal then
 			-- extension, 200 points
 			cpuraceoverpoints += 200
+			winext = 200
 		end
 	elseif winner.name == "draw" then
 		-- if we end in a draw during an extension,
 		-- the non-calling player steals the bonus
+		wincol = 7
+		winname = "draw"
 		if calledext == "player" then
 			cpuraceoverpoints += 200
 		elseif calledext == "cpu" then
