@@ -4,8 +4,13 @@ __lua__
 --init functions
 
 --TODO:
-----4. coup fourre!
-----5. if draw during extension, bonus goes to non-calling player
+----4. finish coup fourre!
+-------- cpu play
+-------- animate both cards drawing
+-------- rotate safety cards?
+----5. finish race over screen showing points earned
+-------- handle draw condition
+-------- display scores in correct player colors
 ----6. w-l record save/clear
 ----7. better sprites
 ----8. card legend screen
@@ -24,6 +29,7 @@ function _init()
 	curgoal = 700
 	totalgoal = 5000
 	currentplayer = {name="nobody"}
+	calledext = "nobody"
 	turninprogress = false
 	playinprogress = false
 	discardinprogress = false
@@ -32,8 +38,10 @@ function _init()
 	playedcardtarget = nil
 	discardedcard = nil
 	cancf = false
+	iscf = false
+	cancfcard = nil
 	drawncard = nil
-	cardplayspeed = 0.03
+	cardplayspeed = 0.01
 	mode = "start"
 	playercardptr = 1
 	deckx = 100
@@ -53,7 +61,19 @@ function _init()
 	-- debugging
 	debug = ""
 	cpudebug = ""
-	cheat = false
+	
+	winname = ""
+	winscore = 0
+	winsft = 0
+	wincfs = 0
+	winall4 = 0
+	winpts = 0
+	winshut = 0
+	windelay = 0
+	winsafe = 0
+	winext = 0
+	
+	cheat = true
 	palt(14,true)
 	palt(0,false)
 end
@@ -72,45 +92,45 @@ function shuffledeck()
 	for i=1,14 do
 		-- add number cards
 		if i <= 10 then
-			add(_d,{type="n",value=25,belowlimit=true,name="25",remedy="",safety="",sprite=1,x=-1,y=-1,fx=1})
-			add(_d,{type="n",value=50,belowlimit=true,name="50",remedy="",safety="",sprite=2,x=-1,y=-1,fx=1})
-			add(_d,{type="n",value=75,belowlimit=false,name="75",remedy="",safety="",sprite=3,x=-1,y=-1,fx=1})
+			add(_d,{type="n",value=25,belowlimit=true,name="25",remedy="",safety="",sprite=1,x=-1,y=-1,fx=1,iscf=false})
+			add(_d,{type="n",value=50,belowlimit=true,name="50",remedy="",safety="",sprite=2,x=-1,y=-1,fx=1,iscf=false})
+			add(_d,{type="n",value=75,belowlimit=false,name="75",remedy="",safety="",sprite=3,x=-1,y=-1,fx=1,iscf=false})
 		end
 		if i <= 12 then
-			add(_d,{type="n",value=100,belowlimit=false,name="100",remedy="",safety="",sprite=4,x=-1,y=-1,fx=1})
+			add(_d,{type="n",value=100,belowlimit=false,name="100",remedy="",safety="",sprite=4,x=-1,y=-1,fx=1,iscf=false})
 		end
 
 		if i <=4 then
-			add(_d,{type="n",value=200,belowlimit=false,name="200",remedy="",safety="",sprite=5,x=-1,y=-1,fx=1})
+			add(_d,{type="n",value=200,belowlimit=false,name="200",remedy="",safety="",sprite=5,x=-1,y=-1,fx=1,iscf=false})
 		end
 		-- add go cards
-		add(_d,{type="g",value=0,belowlimit=false,name="go",remedy="",safety="",sprite=6,x=-1,y=-1,fx=7})
+		add(_d,{type="g",value=0,belowlimit=false,name="go",remedy="",safety="",sprite=6,x=-1,y=-1,fx=7,iscf=false})
 		-- add stop cards
 		if i <=5 then
-			add(_d,{type="s",value=0,belowlimit=false,name="stop",remedy="",safety="emergency",sprite=7,x=-1,y=-1,fx=6})
+			add(_d,{type="s",value=0,belowlimit=false,name="stop",remedy="",safety="emergency",sprite=7,x=-1,y=-1,fx=6,iscf=false})
 		end
 		-- add hazards + speed limits
 		if i <= 3 then
-			add(_d,{type="h",value=0,belowlimit=false,name="flat",remedy="spare",safety="ppt",sprite=8,x=-1,y=-1,fx=4})
-			add(_d,{type="h",value=0,belowlimit=false,name="crash",remedy="repair",safety="ace",sprite=9,x=-1,y=-1,fx=3})
-			add(_d,{type="h",value=0,belowlimit=false,name="empty",remedy="gascan",safety="tanker",sprite=10,x=-1,y=-1,fx=5})
+			add(_d,{type="h",value=0,belowlimit=false,name="flat",remedy="spare",safety="ppt",sprite=8,x=-1,y=-1,fx=4,iscf=false})
+			add(_d,{type="h",value=0,belowlimit=false,name="crash",remedy="repair",safety="ace",sprite=9,x=-1,y=-1,fx=3,iscf=false})
+			add(_d,{type="h",value=0,belowlimit=false,name="empty",remedy="gascan",safety="tanker",sprite=10,x=-1,y=-1,fx=5,iscf=false})
 		end
 		if i <= 4 then
-			add(_d,{type="l",value=0,belowlimit=false,name="limit 50",remedy="nolimit",safety="emergency",sprite=12,x=-1,y=-1,fx=1})
+			add(_d,{type="l",value=0,belowlimit=false,name="limit 50",remedy="nolimit",safety="emergency",sprite=12,x=-1,y=-1,fx=1,iscf=false})
 		end
 		-- add remedies + remove limits
 		if i <= 6 then
-			add(_d,{type="v",value=0,belowlimit=false,name="nolimit",remedy="",safety="emergency",sprite=11,x=-1,y=-1,fx=1})
-			add(_d,{type="r",value=0,belowlimit=false,name="gascan",remedy="",safety="",sprite=17,x=-1,y=-1,fx=1})
-			add(_d,{type="r",value=0,belowlimit=false,name="repair",remedy="",safety="",sprite=18,x=-1,y=-1,fx=1})
-			add(_d,{type="r",value=0,belowlimit=false,name="spare",remedy="",safety="",sprite=19,x=-1,y=-1,fx=1})
+			add(_d,{type="v",value=0,belowlimit=false,name="nolimit",remedy="",safety="emergency",sprite=11,x=-1,y=-1,fx=1,iscf=false})
+			add(_d,{type="r",value=0,belowlimit=false,name="gascan",remedy="",safety="",sprite=17,x=-1,y=-1,fx=1,iscf=false})
+			add(_d,{type="r",value=0,belowlimit=false,name="repair",remedy="",safety="",sprite=18,x=-1,y=-1,fx=1,iscf=false})
+			add(_d,{type="r",value=0,belowlimit=false,name="spare",remedy="",safety="",sprite=19,x=-1,y=-1,fx=1,iscf=false})
 		end
 		-- add safeties
 		if i == 1 then
-			add(_d,{type="f",value=0,belowlimit=false,name="ppt",remedy="",safety="",sprite=13,x=-1,y=-1,fx=1})
-			add(_d,{type="f",value=0,belowlimit=false,name="tanker",remedy="",safety="",sprite=14,x=-1,y=-1,fx=1})
-			add(_d,{type="f",value=0,belowlimit=false,name="ace",remedy="",safety="",sprite=15,x=-1,y=-1,fx=1})
-			add(_d,{type="f",value=0,belowlimit=false,name="emergency",remedy="",safety="",sprite=16,x=-1,y=-1,fx=8})
+			add(_d,{type="f",value=0,belowlimit=false,name="ppt",remedy="",safety="",sprite=13,x=-1,y=-1,fx=1,iscf=false})
+			add(_d,{type="f",value=0,belowlimit=false,name="tanker",remedy="",safety="",sprite=14,x=-1,y=-1,fx=1,iscf=false})
+			add(_d,{type="f",value=0,belowlimit=false,name="ace",remedy="",safety="",sprite=15,x=-1,y=-1,fx=1,iscf=false})
+			add(_d,{type="f",value=0,belowlimit=false,name="emergency",remedy="",safety="",sprite=16,x=-1,y=-1,fx=8,iscf=false})
 		end
 	end
 	
@@ -128,6 +148,8 @@ end
 function _update60()
 	if mode == "start" then
 		update_start()
+	elseif mode == "raceover" then
+		update_raceover()
 	else
 		update_game()
 	end
@@ -135,6 +157,13 @@ end
 
 function update_start()
 	if btnp(5) then
+		mode = "game"
+	end
+end
+
+function update_raceover()
+	if btnp(5) then
+		newrace()
 		mode = "game"
 	end
 end
@@ -151,15 +180,16 @@ function update_game()
 			newmatch()
 		end
 	elseif raceover then
-		if racewinner == "draw" then
-			debug = "nobody finished the race"
-		else
-			debug = racewinner.." wins!"
-		end
-		cpudebug = "press ❎ to start the next race!"
-		if btnp(5) then
-			newrace()
-		end
+		mode = "raceover"
+--		if racewinner == "draw" then
+--			debug = "nobody finished the race"
+--		else
+--			debug = racewinner.." wins!"
+--		end
+--		cpudebug = "press ❎ to start the next race!"
+--		if btnp(5) then
+--			newrace()
+--		end
 	elseif #racewinner > 0 then
 		if curgoal == stdgoal then
 			if racewinner == "player" then
@@ -168,6 +198,7 @@ function update_game()
 				if btnp(2) then
 					curgoal = extgoal
 					debug = "player extends to 1000!"
+					calledext = "player"
 					cpudebug = ""
 					racewinner = ""
 				end
@@ -190,6 +221,7 @@ function update_game()
 				if extdraw > 70 then
 					curgoal = extgoal
 					debug = "cpu extends to 1000!"
+					calledext = "cpu"
 					cpudebug = ""
 					racewinner = ""
 				else
@@ -244,6 +276,19 @@ function update_game()
 			end
 			dealt = true
 		end
+		
+		if cancf then
+			cpudebug = "⬆️ to coup fourre!"
+			if btnp(2) then
+				playcoupfourre(player,cpu)
+				playinprogress = false
+				turninprogress = false
+				cancf = false
+				iscf = true
+			end
+		else
+			cpudebug = ""
+		end
 	
 		if not turninprogress and not drawupinprogress then
 			playinprogress = false
@@ -252,8 +297,10 @@ function update_game()
 			else
 				currentplayer = player
 			end
-			draw_up(currentplayer)
+			draw_up(currentplayer,iscf)
 			drawupinprogress = true
+			cancf = false
+			iscf = false
 		end
 		if drawupinprogress then
 			if drawncard != nil then
@@ -379,6 +426,7 @@ function update_game()
 						playedcard = player.hand[playercardptr]
 						player.prevupcard = player.upcard
 						cpu.prevupcard = cpu.upcard
+						cancf = checkforcf(cpu.hand,playedcard)
 						playcard(player,cpu,player.hand[playercardptr])
 						animatecard(playedcard,player,cpu)
 						if playercardptr > #(player.hand) then
@@ -409,10 +457,11 @@ function update_game()
 				for i=1,#(cpu.hand) do
 					if checkvalidplay(cpu,player,cpu.hand[i]) then
 						debug=""
-						cpudebug="cpu plays "..cpu.hand[i].name
+						--cpudebug="cpu plays "..cpu.hand[i].name
 						playedcard = cpu.hand[i]
 						player.prevupcard = player.upcard
 						cpu.prevupcard = cpu.upcard
+						--cancf = checkforcf(player.hand,playedcard)
 						playcard(cpu,player,cpu.hand[i])
 						animatecard(playedcard,cpu,player)
 						sfx(playedcard.fx)
@@ -423,7 +472,7 @@ function update_game()
 		
 				-- cpu is unable to play, needs to discard
 				debug=""
-				cpudebug="cpu discards "..cpu.hand[1].name
+				--cpudebug="cpu discards "..cpu.hand[1].name
 				discard(cpu,cpu.hand[1])
 				sfx(2)
 				discardinprogress = true
@@ -436,9 +485,31 @@ end
 function _draw()
 	if mode == "start" then
 		draw_start()
+	elseif mode == "raceover" then
+		draw_raceover()
 	else
 		draw_game()
 	end
+end
+
+function draw_raceover()
+	cls()
+	print(winname.." wins!",5,5,7)
+	print("kilos: "..winscore,5,13,7)
+	print("win bonus: "..winpts,5,21,7)
+	print("safeties: "..winsft,5,29,7)
+	print("coup fourre: "..wincfs,5,37,7)
+	print("all 4 safeties: "..winall4,5,45,7)
+	print("shutout: "..winshut,5,53,7)
+	print("delayed win: "..windelay,5,61,7)
+	print("safe trip: "..winsafe,5,69,7)
+	print("extension: "..winext,5,77,7)
+	if winname == "player" then
+		print("=====race total: "..playerraceoverpoints.."=====",5,90,7)
+	else
+		print("=====race total: "..cpuraceoverpoints.."=====",5,90,7)
+	end
+	print("press ❎ for next race!",5,100,4)
 end
 
 function draw_start()
@@ -479,7 +550,14 @@ function draw_game()
 			numsafeties -= 1
 		end
 		for i=1,numsafeties do
+			if player.safeties[i].iscf then
+				pal(12,7)
+				pal(15,9)
+			end
 			spr(player.safeties[i].sprite,playerbox.x+88+(10*(i-1)),playerbox.y+2)
+			pal()
+			palt(14,true)
+			palt(0,false)
 		end
 	end
 	if cpu.prevupcard != nil and playedcard != nil and playedcardtarget != nil then
@@ -492,8 +570,18 @@ function draw_game()
 		numsafeties -= 1
 		end
 	for i=1,numsafeties do
+		if cpu.safeties[i].iscf then
+			pal(12,7)
+			pal(15,9)
+		else
+--			pal(7,12)
+--			pal(9,15)
+		end		
 		spr(cpu.safeties[i].sprite,cpubox.x+88+(10*(i-1)),cpubox.y+2)
 	end
+	pal()
+	palt(14,true)
+	palt(0,false)
 
 	if drawupinprogress and currentplayer.name == "player" then
 		for i=1,#(player.hand)-1 do
@@ -578,6 +666,19 @@ function newrace()
 	playerraceoverpoints=0
 	cpuraceoverpoints=0
 	curgoal=stdgoal
+	calledext="nobody"
+	cancf = false
+	cancfcard = nil
+	winname = ""
+	winscore = 0
+	winsft = 0
+	wincfs = 0
+	winall4 = 0
+	winpts = 0
+	winshut = 0
+	windelay = 0
+	winsafe = 0
+	winext = 0
 end
 
 function draw_up(_curplayer,_cf)
@@ -811,9 +912,34 @@ function playcard(_player,_opponent,_card)
 	recalculatehandpos(_player)
 end
 
+function playcoupfourre(_player,_opponent)
+	-- for coup fourres, we:
+	---- remove played card
+	---- revert to previous upcard
+	---- palette swap safety card colors
+	---- add card to safeties
+	---- add one to cfs total
+	---- end turn
+	card = nil
+	for i=1,#_player.hand do
+		if _player.hand[i].name == playedcard.safety then
+			card = _player.hand[i]
+		end
+	end
+	playedcard = nil
+	_player.upcard = _player.prevupcard
+	_player.prevupcard = nil
+	card.iscf = true
+	add(_player.safeties,clonecard(card))
+	del(_player.hand,card)
+	recalculatehandpos(_player)
+	_player.cfs += 1
+end
+
 function checkforcf(_hand,_card)
 	for i=1,#_hand do
 		if _hand[i].name == _card.safety then
+			cancfcard = _hand[i]
 			return true
 		end
 	end
@@ -859,39 +985,53 @@ function isracewon()
 
 	playerraceoverpoints += player.score
 	playerraceoverpoints += #(player.safeties) * 100
+	playerraceoverpoints += player.cfs * 300
 	if #(player.safeties) == 4 then
 		playerraceoverpoints += 400
 	end
 	cpuraceoverpoints += cpu.score
 	cpuraceoverpoints += #(cpu.safeties) * 100
+	cpuraceoverpoints += cpu.cfs * 300
 	if #(cpu.safeties) == 4 then
 		cpuraceoverpoints += 400
 	end
-	
 	if winner.name == "player" then
+		winname = "player"
+		winscore = player.score
+		winsft = #(player.safeties) * 100
+		wincfs = player.cfs * 300
+		if #(player.safeties) == 4 then
+			winall4 = 400
+		end
+		winpts = 400
+
 		-- race winner gets 400 points
 		playerraceoverpoints += 400
+		winpts = 400
 	
 		if loser.score == 0 then
 			-- shutout, 500 points
 			playerraceoverpoints += 500
+			winshut = 500
 		end
 
 		if #deck == 0 then
 			-- delayed action, 300 points
 			playerraceoverpoints += 300
+			windelay = 300
 		end
 	
 		if winner.num200s == 0 then
 			-- safe trip, 300 points
 			playerraceoverpoints += 300
+			winsafe = 300
 		end
 		
 		if curgoal == extgoal then
 			-- extension, 200 points
 			playerraceoverpoints += 200
+			winext = 200
 		end
-		-- TODO: coup fourre, 300 points each
 	elseif winner.name == "cpu" then
 		-- race winner gets 400 points
 		cpuraceoverpoints += 400
@@ -915,14 +1055,21 @@ function isracewon()
 			-- extension, 200 points
 			cpuraceoverpoints += 200
 		end
-		-- TODO: coup fourre, 300 points each
+	elseif winner.name == "draw" then
+		-- if we end in a draw during an extension,
+		-- the non-calling player steals the bonus
+		if calledext == "player" then
+			cpuraceoverpoints += 200
+		elseif calledext == "cpu" then
+			playerraceoverpoints += 200
+		end
 	end
 	
 	return winner.name
 end
 
 function clonecard(_card)
-	return {type=_card.type,value=_card.value,belowlimit=_card.belowlimit,name=_card.name,remedy=_card.remedy,safety=_card.safety,sprite=_card.sprite,x=_card.x,y=_card.y,fx=_card.fx}
+	return {type=_card.type,value=_card.value,belowlimit=_card.belowlimit,name=_card.name,remedy=_card.remedy,safety=_card.safety,sprite=_card.sprite,x=_card.x,y=_card.y,fx=_card.fx,iscf=_card.iscf}
 end
 __gfx__
 000000006666666666666666666666666666666666666666bbbbbbbb88888888888888888888888888888888bbbbbbbb88888888cccccccccccccccccccccccc
