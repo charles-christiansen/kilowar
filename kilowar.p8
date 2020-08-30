@@ -75,7 +75,7 @@ function _init()
 	winext = 0
 	wincol = 7
 	
-	cheat = false
+	cheat = true
 	palt(14,true)
 	palt(0,false)
 	
@@ -84,6 +84,9 @@ function _init()
 	ccx = -200
 	pdx = 0.1
 	cdx = 0.1
+	cfblinktimer=1
+	cfblinktimercols={7,7,7,7,10,10,10,10,11,11,11,11}
+	cfon=true
 end
 
 function shuffledeck()
@@ -361,7 +364,6 @@ function update_game()
 				end
 			else
 				-- player can coup fourre
-				cpudebug = "⬆️ to coup fourre!"
 				if btnp(2) then
 					playcoupfourre(player,cpu)
 					playinprogress = false
@@ -865,8 +867,16 @@ end
 
 function draw_game()
 	cls()
-	print("player: "..player.score.." ("..player.total.." total)",5,5,player.col)
-	print("cpu:    "..cpu.score.." ("..cpu.total.." total)",5,45,cpu.col)
+	print("player: "..player.score.." (match total: "..player.total..")",5,5,player.col)
+	if cancf and currentplayer.name == "cpu" and cfon then
+		print("⬆️",110,player.cardy,cfblinktimercols[cfblinktimer])
+	end
+	cfblinktimer += 1
+	if cfblinktimer % 12 == 0 then
+		cfon = not cfon
+		cfblinktimer = 1
+	end
+	print("cpu:    "..cpu.score.." (match total: "..cpu.total..")",5,45,cpu.col)
 	rectfill(playerbox.x,playerbox.y,playerbox.xe,playerbox.ye,playerbox.col)
 	rectfill(playerptrbox.x,playerptrbox.y,playerptrbox.xe,playerptrbox.ye,playerptrbox.col)
 	rectfill(cpubox.x,cpubox.y,cpubox.xe,cpubox.ye,cpubox.col)
