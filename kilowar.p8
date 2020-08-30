@@ -4,10 +4,7 @@ __lua__
 --init functions
 
 --TODO:
-----2. finish race over screen showing points earned
--------- handle draw condition
--------- display scores in correct player colors
-----4. difficulty levels
+----4. difficulty level for card playing
 ----5. w-l record save/clear
 ----6. better sprites
 ----7. card legend screen
@@ -53,6 +50,10 @@ function _init()
 	matchwinner = ""
 	raceover = false
 	matchover = false
+	
+	-- normal difficulty
+	difficulty = 2
+	diffchoices = {"easy","normal","hard"}
 	
 	playerraceoverpoints = 0
 	cpuraceoverpoints = 0
@@ -158,6 +159,18 @@ function _update60()
 end
 
 function update_start()
+	if btnp(2) then
+		difficulty -= 1
+		if difficulty < 1 then
+			difficulty = 3
+		end
+	end
+	if btnp(3) then
+		difficulty += 1
+		if difficulty > 3 then
+			difficulty = 1
+		end
+	end
 	if btnp(5) then
 		mode = "game"
 	end
@@ -174,6 +187,10 @@ function update_matchover()
 	if btnp(5) then
 		newmatch()
 		mode = "game"
+	end
+	if btnp(4) then
+		newmatch()
+		mode = "start"
 	end
 end
 
@@ -212,15 +229,8 @@ function update_game()
 					end
 				end
 			elseif racewinner == "cpu" then
-				-- cpu will extend only 30% of the time
-				extdraw = flr(rnd(100))+1
-				if extdraw > 70 then
-					curgoal = extgoal
-					debug = "cpu extends to 1000!"
-					calledext = "cpu"
-					cpudebug = ""
-					racewinner = ""
-				else
+				if difficulty == 1 then
+					-- easy cpu will never extend
 					player.total += playerraceoverpoints
 					cpu.total += cpuraceoverpoints
 					-- check for match win condition
@@ -230,6 +240,52 @@ function update_game()
 						matchover = true
 					else
 						raceover = true
+					end
+				elseif difficulty == 2 then
+					-- normal cpu will extend only 50% of the time
+					extfloor = 50
+					extdraw = flr(rnd(100))+1
+					if extdraw > extfloor then
+						curgoal = extgoal
+						debug = "cpu extends to 1000!"
+						calledext = "cpu"
+						cpudebug = ""
+						racewinner = ""
+					else
+						player.total += playerraceoverpoints
+						cpu.total += cpuraceoverpoints
+						-- check for match win condition
+						matchwinner = ismatchwon()
+
+						if #matchwinner > 0 then
+							matchover = true
+						else
+							raceover = true
+						end
+					end
+				else
+					-- hard cpu will always extend if 400 or more kilos ahead
+					-- hard cpu will always extend if player shows a hazard that 
+					-- cpu has safety for
+					cond1 = cpu.score - player.score >= 400
+					cond2 = player.upcard != nil and ((player.upcard.type == "s" and hassafety(cpu,"emergency")) or (player.upcard.type == "h" and hassafety(cpu,player.upcard.safety)))
+					if cond1 or cond2 then
+						curgoal = extgoal
+						debug = "cpu extends to 1000!"
+						calledext = "cpu"
+						cpudebug = ""
+						racewinner = ""
+					else
+						player.total += playerraceoverpoints
+						cpu.total += cpuraceoverpoints
+						-- check for match win condition
+						matchwinner = ismatchwon()
+
+						if #matchwinner > 0 then
+							matchover = true
+						else
+							raceover = true
+						end
 					end
 				end
 			else
@@ -276,8 +332,18 @@ function update_game()
 		if cancf then
 			if currentplayer.name==player.name then
 				-- cpu can coup fourre
-				-- cpu will call it 75% of the time
-				if flr(rnd(100))+1 > 25 then
+				if difficulty == 1 then
+					-- easy cpu will call it 60% of the time
+					cffloor = 40
+				elseif difficulty == 2 then
+					-- normal cpu will call it 75% of the time
+					cffloor = 25
+				else
+					-- hard cpu will call it 95% of the time
+					cffloor = 5
+				end
+				
+				if flr(rnd(100))+1 > cffloor then
 					cpudebug = "~~~~~coup fourre!~~~~~"
 					playcoupfourre(cpu,player)
 					playinprogress = false
@@ -471,10 +537,10 @@ function update_game()
 					end
 				end
 			else
-				-- cpu skill level logic TODO:
-				---- 1 = normal (plays first playable card)
-				---- 0 = easy (plays to go/recover when possible)
-				---- 2 = hard (plays to stop player when possible)
+				---- 1 = easy (plays to go/recover when possible)
+				---- 2 = normal (plays first playable card)
+				---- 3 = hard (plays to stop player when possible)
+				-- !!!TODO: add difficulty level
 				for i=1,#(cpu.hand) do
 					if checkvalidplay(cpu,player,cpu.hand[i]) then
 						if cpu.hand[i].type == "f" and ((player.score < 600 and curgoal == stdgoal) or (player.score < 900 and curgoal == extgoal) or #deck == 0) then
@@ -498,6 +564,7 @@ function update_game()
 				-- for the first half of the deck unless the upcard
 				-- is the matching hazard
 				-- otherwise save them for coup fourre!
+				-- !!!TODO: add difficulty level
 				if safetyplay > 0 and ((cpu.upcard != nil and cpu.upcard.safety == cpu.hand[safetyplay].name) or #deck < 53) then
 					debug=""
 					playedcard = cpu.hand[safetyplay]
@@ -552,6 +619,7 @@ function draw_matchover()
 		print("player: "..player.total,5,43,player.col)
 	end
 	print("press ❎ to start a new match!",5,63,4)
+	print("press 🅾️ to restart kilowar!",5,73,4)
 end
 
 function draw_raceover()
@@ -604,7 +672,8 @@ end
 function draw_start()
 	cls()
 	spr(64,36,10,7,3)
-	print("by chuck",40,50,3)
+--	print("by chuck",40,50,3)
+	print("cpu difficulty: "..diffchoices[difficulty].." ⬆️ ⬇️ ",10,60,7)
 	print("press ❎ to start",32,80,4)
 end
 
@@ -617,9 +686,9 @@ function draw_game()
 	rectfill(cpubox.x,cpubox.y,cpubox.xe,cpubox.ye,cpubox.col)
 	rectfill(debugbox.x,debugbox.y,debugbox.xe,debugbox.ye,debugbox.col)
 	if currentplayer.name == player.name then
-		print("*",14+(10*(playercardptr-1)),30,player.col)
+		print("❎",14+(10*(playercardptr-1)),30,player.col)
 	else
-		print("*",14+(10*(playercardptr-1)),30,0)
+		print("❎",14+(10*(playercardptr-1)),30,0)
 	end
 	if cpudebug != "" then
 		print(cpudebug,5,debugbox.y+2,10)
