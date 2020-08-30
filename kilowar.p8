@@ -21,7 +21,7 @@ function _init()
 	stdgoal = 700
 	extgoal = 1000
 	curgoal = 700
-	totalgoal = 5000
+	totalgoal = 500
 	currentplayer = {name="nobody"}
 	calledext = "nobody"
 	turninprogress = false
@@ -37,6 +37,8 @@ function _init()
 	drawncard = nil
 	multidraw = false
 	safetyplay = 0
+	hurtplay = 0
+	helpplay = 0
 	cardplayspeed = 0.025
 	mode = "start"
 	playercardptr = 1
@@ -265,9 +267,10 @@ function update_game()
 					end
 				else
 					-- hard cpu will always extend if 400 or more kilos ahead
+					-- unless stopping results in a shutout
 					-- hard cpu will always extend if player shows a hazard that 
 					-- cpu has safety for
-					cond1 = cpu.score - player.score >= 400
+					cond1 = cpu.score - player.score >= 400 and player.score > 0
 					cond2 = player.upcard != nil and ((player.upcard.type == "s" and hassafety(cpu,"emergency")) or (player.upcard.type == "h" and hassafety(cpu,player.upcard.safety)))
 					if cond1 or cond2 then
 						curgoal = extgoal
@@ -537,56 +540,205 @@ function update_game()
 					end
 				end
 			else
-				---- 1 = easy (plays to go/recover when possible)
-				---- 2 = normal (plays first playable card)
-				---- 3 = hard (plays to stop player when possible)
-				-- !!!TODO: add difficulty level
-				for i=1,#(cpu.hand) do
-					if checkvalidplay(cpu,player,cpu.hand[i]) then
-						if cpu.hand[i].type == "f" and ((player.score < 600 and curgoal == stdgoal) or (player.score < 900 and curgoal == extgoal) or #deck == 0) then
-							safetyplay = i
-						else
+				if difficulty == 1 then
+					---- 1 = easy (plays to go/recover when possible)
+					for i=1,#(cpu.hand) do
+						if checkvalidplay(cpu,player,cpu.hand[i]) then
+							if cpu.hand[i].type == "f" and ((player.score < 600 and curgoal == stdgoal) or (player.score < 900 and curgoal == extgoal) or #deck == 0) then
+								safetyplay = i
+							elseif cpu.hand[i].type == "h" or cpu.hand[i].type == "s" or cpu.hand[i].type == "l" then
+								hurtplay = i
+							else
+								debug=""
+								playedcard = cpu.hand[i]
+								player.prevupcard = player.upcard
+								cpu.prevupcard = cpu.upcard
+								playcard(cpu,player,cpu.hand[i])
+								animatecard(playedcard,cpu,player)
+								--sfx(playedcard.fx)
+								safetyplay = 0
+								hurtplay = 0
+								helpplay = 0
+								playinprogress = true
+								return
+							end
+						end
+					end
+
+					if hurtplay > 0 then
+						-- give easy cpu a 50% chance of playing a harm card
+						if flr(rnd(100))+1 > 50 then
 							debug=""
-							playedcard = cpu.hand[i]
+							playedcard = cpu.hand[hurtplay]
 							player.prevupcard = player.upcard
 							cpu.prevupcard = cpu.upcard
-							playcard(cpu,player,cpu.hand[i])
+							playcard(cpu,player,cpu.hand[hurtplay])
 							animatecard(playedcard,cpu,player)
 							--sfx(playedcard.fx)
 							safetyplay = 0
+							hurtplay = 0
+							helpplay = 0
 							playinprogress = true
 							return
 						end
 					end
-				end
-				
-				-- we'll favor discarding over playing a safety
-				-- for the first half of the deck unless the upcard
-				-- is the matching hazard
-				-- otherwise save them for coup fourre!
-				-- !!!TODO: add difficulty level
-				if safetyplay > 0 and ((cpu.upcard != nil and cpu.upcard.safety == cpu.hand[safetyplay].name) or #deck < 53) then
-					debug=""
-					playedcard = cpu.hand[safetyplay]
-					player.prevupcard = player.upcard
-					cpu.prevupcard = cpu.upcard
-					playcard(cpu,player,cpu.hand[safetyplay])
-					animatecard(playedcard,cpu,player)
-					--sfx(playedcard.fx)
-					safetyplay = 0
-					playinprogress = true
-				else
-					-- cpu is unable to play, needs to discard
-					debug=""
-					if #cpu.hand > 0 then
-						for i=1,#(cpu.hand) do
-							if cpu.hand[i].type != "f" or #cpu.hand < 5 then
-								discard(cpu,cpu.hand[i])
-								break
+					
+					-- we'll favor discarding over playing a safety
+					-- for the first half of the deck unless the upcard
+					-- is the matching hazard
+					-- otherwise save them for coup fourre!
+					if safetyplay > 0 and ((cpu.upcard != nil and cpu.upcard.safety == cpu.hand[safetyplay].name) or #deck < 53) then
+						debug=""
+						playedcard = cpu.hand[safetyplay]
+						player.prevupcard = player.upcard
+						cpu.prevupcard = cpu.upcard
+						playcard(cpu,player,cpu.hand[safetyplay])
+						animatecard(playedcard,cpu,player)
+						--sfx(playedcard.fx)
+						safetyplay = 0
+						playinprogress = true
+					else
+						-- cpu is unable to play, needs to discard
+						debug=""
+						if #cpu.hand > 0 then
+							for i=1,#(cpu.hand) do
+								if cpu.hand[i].type != "f" or #cpu.hand < 5 then
+									discard(cpu,cpu.hand[i])
+									break
+								end
+							end
+							--sfx(2)
+							discardinprogress = true
+						end
+					end
+				elseif difficulty == 2 then
+					---- 2 = normal (plays first playable card)
+					for i=1,#(cpu.hand) do
+						if checkvalidplay(cpu,player,cpu.hand[i]) then
+							if cpu.hand[i].type == "f" and ((player.score < 600 and curgoal == stdgoal) or (player.score < 900 and curgoal == extgoal) or #deck == 0) then
+								safetyplay = i
+							else
+								debug=""
+								playedcard = cpu.hand[i]
+								player.prevupcard = player.upcard
+								cpu.prevupcard = cpu.upcard
+								playcard(cpu,player,cpu.hand[i])
+								animatecard(playedcard,cpu,player)
+								--sfx(playedcard.fx)
+								safetyplay = 0
+								playinprogress = true
+								return
 							end
 						end
-						--sfx(2)
-						discardinprogress = true
+					end
+				
+					-- we'll favor discarding over playing a safety
+					-- for the first half of the deck unless the upcard
+					-- is the matching hazard
+					-- otherwise save them for coup fourre!
+					-- !!!TODO: add difficulty level
+					if safetyplay > 0 and ((cpu.upcard != nil and cpu.upcard.safety == cpu.hand[safetyplay].name) or #deck < 53) then
+						debug=""
+						playedcard = cpu.hand[safetyplay]
+						player.prevupcard = player.upcard
+						cpu.prevupcard = cpu.upcard
+						playcard(cpu,player,cpu.hand[safetyplay])
+						animatecard(playedcard,cpu,player)
+						--sfx(playedcard.fx)
+						safetyplay = 0
+						playinprogress = true
+					else
+						-- cpu is unable to play, needs to discard
+						debug=""
+						if #cpu.hand > 0 then
+							for i=1,#(cpu.hand) do
+								if cpu.hand[i].type != "f" or #cpu.hand < 5 then
+									discard(cpu,cpu.hand[i])
+									break
+								end
+							end
+							--sfx(2)
+							discardinprogress = true
+						end
+					end
+				else
+					---- 3 = hard (plays to stop player when possible)
+					for i=1,#(cpu.hand) do
+						if checkvalidplay(cpu,player,cpu.hand[i]) then
+							if cpu.hand[i].type == "f" and ((player.score < 600 and curgoal == stdgoal) or (player.score < 900 and curgoal == extgoal) or #deck == 0) then
+								safetyplay = i
+							elseif cpu.hand[i].type == "g" or cpu.hand[i].type == "v" or cpu.hand[i].type == "r" then
+								helpplay = i
+							elseif cpu.hand[i].type == "n" and cpu.hand[i].value + cpu.score != curgoal then
+								helpplay = i
+							else
+								debug=""
+								playedcard = cpu.hand[i]
+								player.prevupcard = player.upcard
+								cpu.prevupcard = cpu.upcard
+								playcard(cpu,player,cpu.hand[i])
+								animatecard(playedcard,cpu,player)
+								--sfx(playedcard.fx)
+								safetyplay = 0
+								hurtplay = 0
+								helpplay = 0
+								playinprogress = true
+								return
+							end
+						end
+					end
+
+					if helpplay > 0 then
+						debug=""
+						playedcard = cpu.hand[helpplay]
+						player.prevupcard = player.upcard
+						cpu.prevupcard = cpu.upcard
+						playcard(cpu,player,cpu.hand[helpplay])
+						animatecard(playedcard,cpu,player)
+						--sfx(playedcard.fx)
+						safetyplay = 0
+						hurtplay = 0
+						helpplay = 0
+						playinprogress = true
+						return
+					end
+					
+					-- we'll favor discarding over playing a safety
+					-- for the first 75% of the deck unless the upcard
+					-- is the matching hazard
+					-- otherwise save them for coup fourre!
+					if safetyplay > 0 and ((cpu.upcard != nil and cpu.upcard.safety == cpu.hand[safetyplay].name) or #deck < 27) then
+						debug=""
+						playedcard = cpu.hand[safetyplay]
+						player.prevupcard = player.upcard
+						cpu.prevupcard = cpu.upcard
+						playcard(cpu,player,cpu.hand[safetyplay])
+						animatecard(playedcard,cpu,player)
+						--sfx(playedcard.fx)
+						safetyplay = 0
+						playinprogress = true
+					else
+						-- cpu is unable to play, needs to discard
+						debug=""
+						todiscard=0
+						if #cpu.hand > 0 then
+							for i=1,#(cpu.hand) do
+								if #cpu.hand < 5 then
+									todiscard = i
+									break
+								elseif cpu.hand[i].type != "f" and cpu.hand[i].type != "h" and cpu.hand[i].type != "l" and cpu.hand[i].type != "s" then
+									todiscard = i
+									break
+								end
+							end
+							--sfx(2)
+							if todiscard > 0 then
+								discard(cpu,cpu.hand[todiscard])
+							else
+								discard(cpu,cpu.hand[1])
+							end
+							discardinprogress = true
+						end
 					end
 				end
 			end
@@ -609,17 +761,26 @@ end
 
 function draw_matchover()
 	cls()
-	print("***** "..matchwinner.." wins the match! *****",5,5,7)
-	print("final scores",25,25,7)
-	if matchwinner == "player" then
-		print("player: "..player.total,5,35,player.col)
-		print("cpu: "..cpu.total,5,43,cpu.col)
-	else
-		print("cpu: "..cpu.total,5,35,cpu.col)
-		print("player: "..player.total,5,43,player.col)
+	spr(22,0,0)
+	for i=1,15 do
+		spr(22,i*8,0)
+		spr(22,0,i*8)
+		spr(22,120,i*8)
+		spr(22,i*8,120)
 	end
-	print("press ❎ to start a new match!",5,63,4)
-	print("press 🅾️ to restart kilowar!",5,73,4)
+	print("***** "..matchwinner.." wins! *****",10,10,7)
+	print("final scores",30,30,7)
+	if matchwinner == "player" then
+		print("player: "..player.total,10,40,player.col)
+		print("cpu: "..cpu.total,10,48,cpu.col)
+	else
+		print("cpu: "..cpu.total,10,40,cpu.col)
+		print("player: "..player.total,10,48,player.col)
+	end
+	print("press ❎ to start a",10,63,4)
+	print("new match!",10,71,4)
+	print("press 🅾️ to",10,81,4)
+	print("restart kilowar!",10,89,4)
 end
 
 function draw_raceover()
@@ -818,6 +979,8 @@ function newrace()
 	drawncard = nil
 	multidraw = false
 	safetyplay = 0
+	hurtplay = 0
+	helpplay = 0
 	deck=shuffledeck()
 	debug=""
 	cpudebug=""
@@ -1263,14 +1426,14 @@ __gfx__
 007007006777777667737776677337766773337667733336b77bb77b85855858850000588505502885999958b7b7777b85888558cff0affcc0ff0f0cc0fffffc
 000000006737777667337776673337766733337667333336b777777b88555588855555588555554885555558bb77777b85555558cffffffccffffffcc0fffffc
 000000006666666666666666666666666666666666666666bbbbbbbb88888888888888888888888888888888bbbbbbbb88888888cccccccccccccccccccccccc
-ccccccccbbbbbbbbbbbbbbbbbbbbbbbb111111118888888800000000000000000000000000000000000000000000000000000000000000000000000000000000
-cffffffcb777777bb777777bb777777b129292918778777800000000000000000000000000000000000000000000000000000000000000000000000000000000
-cffffffcb777707bb776767bb770077b192929218788787800000000000000000000000000000000000000000000000000000000000000000000000000000000
-cf8811fcb777077bb776667bb706607b129292918778787800000000000000000000000000000000000000000000000000000000000000000000000000000000
-cf8811fcb788877bb777677bb706607b192929218878787800000000000000000000000000000000000000000000000000000000000000000000000000000000
-c000000cb788877bb777677bb770077b129292918778777800000000000000000000000000000000000000000000000000000000000000000000000000000000
-cffffffcb788877bb777677bb777777b192929218888888800000000000000000000000000000000000000000000000000000000000000000000000000000000
-ccccccccbbbbbbbbbbbbbbbbbbbbbbbb111111118888888800000000000000000000000000000000000000000000000000000000000000000000000000000000
+ccccccccbbbbbbbbbbbbbbbbbbbbbbbb111111118888888807070707000000000000000000000000000000000000000000000000000000000000000000000000
+cffffffcb777777bb777777bb777777b129292918778777870707070000000000000000000000000000000000000000000000000000000000000000000000000
+cffffffcb777707bb776767bb770077b192929218788787807070707000000000000000000000000000000000000000000000000000000000000000000000000
+cf8811fcb777077bb776667bb706607b129292918778787870707070000000000000000000000000000000000000000000000000000000000000000000000000
+cf8811fcb788877bb777677bb706607b192929218878787807070707000000000000000000000000000000000000000000000000000000000000000000000000
+c000000cb788877bb777677bb770077b129292918778777870707070000000000000000000000000000000000000000000000000000000000000000000000000
+cffffffcb788877bb777677bb777777b192929218888888807070707000000000000000000000000000000000000000000000000000000000000000000000000
+ccccccccbbbbbbbbbbbbbbbbbbbbbbbb111111118888888870707070000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
