@@ -4,7 +4,6 @@ __lua__
 --init functions
 
 --TODO:
-----4. difficulty level for card playing
 ----5. w-l record save/clear
 ----6. better sprites
 ----7. card legend screen
@@ -21,7 +20,7 @@ function _init()
 	stdgoal = 700
 	extgoal = 1000
 	curgoal = 700
-	totalgoal = 500
+	totalgoal = 5000
 	currentplayer = {name="nobody"}
 	calledext = "nobody"
 	turninprogress = false
