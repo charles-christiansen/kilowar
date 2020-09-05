@@ -42,6 +42,7 @@ function _init()
 	carspeed = 0.5
 	cardestx = -1
 	mode = "start"
+	romode = ""
 	playercardptr = 1
 	deckx = 98
 	decky = 78
@@ -77,7 +78,19 @@ function _init()
 	winext = 0
 	wincol = 7
 	
-	cheat = true
+	losename = ""
+	losescore = 0
+	losesft = 0
+	losecfs = 0
+	loseall4 = 0
+	losepts = 0
+	loseshut = 0
+	losedelay = 0
+	losesafe = 0
+	loseext = 0
+	losecol = 7
+
+	cheat = false
 	palt(14,true)
 	palt(0,false)
 	
@@ -213,6 +226,12 @@ function update_start()
 end
 
 function update_raceover()
+	if btnp(0) then
+		romode = "winner"
+	end
+	if btnp(1) then
+		romode = "loser"
+	end
 	if btnp(5) then
 		newrace()
 		mode = "game"
@@ -917,16 +936,28 @@ end
 function draw_raceover()
 	cls()
 	if winname != "draw" then
-		print(winname.." wins!",5,5,wincol)
-		print("kilos: "..winscore,5,13,wincol)
-		print("win bonus: "..winpts,5,21,wincol)
-		print("safeties: "..winsft,5,29,wincol)
-		print("coup fourre: "..wincfs,5,37,wincol)
-		print("all 4 safeties: "..winall4,5,45,wincol)
-		print("shutout: "..winshut,5,53,wincol)
-		print("delayed win: "..windelay,5,61,wincol)
-		print("safe trip: "..winsafe,5,69,wincol)
-		print("extension: "..winext,5,77,wincol)
+		if romode == "" then
+			romode = "winner"
+		end
+		if romode == "winner" then
+			print(winname.." wins!",5,5,wincol)
+			print("kilos: "..winscore,5,13,wincol)
+			print("win bonus: "..winpts,5,21,wincol)
+			print("safeties: "..winsft,5,29,wincol)
+			print("coup fourre: "..wincfs,5,37,wincol)
+			print("all 4 safeties: "..winall4,5,45,wincol)
+			print("shutout: "..winshut,5,53,wincol)
+			print("delayed win: "..windelay,5,61,wincol)
+			print("safe trip: "..winsafe,5,69,wincol)
+			print("extension: "..winext,5,77,wincol)
+		else
+			print(losename.." loses.",5,5,losecol)
+			print("kilos: "..losescore,5,13,losecol)
+			print("safeties: "..losesft,5,21,losecol)
+			print("coup fourre: "..losecfs,5,29,losecol)
+			print("all 4 safeties: "..loseall4,5,37,losecol)
+		end
+		print("⬅️: winner ➡️: loser",5,85)
 	else
 		print("nobody won the race",5,5,wincol)
 		print("player kilos: "..player.score,5,13,player.col)
@@ -956,9 +987,9 @@ function draw_raceover()
 			print("cpu extension stop: 0",5,85,cpu.col)
 		end
 	end
-	print("=====player race total: "..playerraceoverpoints.."=====",5,93,player.col)
-	print("=====cpu race total: "..cpuraceoverpoints.."=====",5,103,cpu.col)
-	print("press ❎ for next race!",5,113,4)
+	print("=====player race total: "..playerraceoverpoints.."=====",5,95,player.col)
+	print("=====cpu race total: "..cpuraceoverpoints.."=====",5,105,cpu.col)
+	print("press ❎ for next race!",5,118,4)
 end
 
 function draw_start()
@@ -1189,6 +1220,7 @@ function newrace()
 	debug=""
 	racewinner=""
 	raceover=false
+	romode=""
 	playerraceoverpoints=0
 	cpuraceoverpoints=0
 	curgoal=stdgoal
@@ -1544,6 +1576,18 @@ function isracewon()
 	winsafe = 0
 	winext = 0
 
+	losename = ""
+	losescore = 0
+	losesft = 0
+	losecfs = 0
+	loseall4 = 0
+	losepts = 0
+	loseshut = 0
+	losedelay = 0
+	losesafe = 0
+	loseext = 0
+	losecol = 7
+
 	playerraceoverpoints += player.score
 	playerraceoverpoints += #(player.safeties) * 100
 	playerraceoverpoints += player.cfs * 300
@@ -1558,12 +1602,20 @@ function isracewon()
 	end
 	if winner.name == "player" then
 		winname = "player"
+		losename = "cpu"
 		wincol = player.col
+		losecol = cpu.col
 		winscore = player.score
+		losescore = cpu.score
 		winsft = #(player.safeties) * 100
+		losesft = #(cpu.safeties) * 100
 		wincfs = player.cfs * 300
+		losecfs = cpu.cfs * 300
 		if #(player.safeties) == 4 then
 			winall4 = 400
+		end
+		if #(cpu.safeties) == 4 then
+			loseall4 = 400
 		end
 
 		-- race winner gets 400 points
@@ -1595,12 +1647,20 @@ function isracewon()
 		end
 	elseif winner.name == "cpu" then
 		winname = "cpu"
+		losename = "player"
 		wincol = cpu.col
+		losecol = player.col
 		winscore = cpu.score
+		losescore = player.score
 		winsft = #(cpu.safeties) * 100
+		losesft = #(player.safeties) * 100
 		wincfs = cpu.cfs * 300
+		losecfs = player.cfs * 300
 		if #(cpu.safeties) == 4 then
 			winall4 = 400
+		end
+		if #(player.safeties) == 4 then
+			loseall4 = 400
 		end
 
 		-- race winner gets 400 points
