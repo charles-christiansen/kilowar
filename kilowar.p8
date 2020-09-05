@@ -4,9 +4,7 @@ __lua__
 --init functions
 
 --TODO:
----- 1. instruction screen slide in/out
 ---- 2. race end screen player/cpu scores slide in/out
----- 3. coup fourre sound effect
 ---- 4. more visible coup fourre icon
 ---- 5. more card sounds
 ---- 6. better card selection (blow up sprite size?)
@@ -79,7 +77,7 @@ function _init()
 	winext = 0
 	wincol = 7
 	
-	cheat = false
+	cheat = true
 	palt(14,true)
 	palt(0,false)
 	
@@ -371,6 +369,8 @@ function update_game()
 			if currentplayer.name==player.name then
 				-- cpu can coup fourre
 				if flr(rnd(100))+1 > cffloors[difficulty] then
+					sfx(-1)
+					sfx(10)
 					showsash("coupe fourre!",cpu.col,7)
 					playcoupfourre(cpu,player)
 					playinprogress = false
@@ -381,6 +381,8 @@ function update_game()
 			else
 				-- player can coup fourre
 				if btnp(2) then
+					sfx(-1)
+					sfx(10)
 					showsash("coupe fourre!",player.col,7)
 					playcoupfourre(player,cpu)
 					playinprogress = false
@@ -1754,3 +1756,4 @@ __sfx__
 0010000016550185501b5501e550205502255024550265501f5000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500
 001800002422024220182201822024220242201822018220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000200000b7500a7500a7500975007750067500675003750047500475004750037500375003750037500375003750027500275001750007500175000750007500075000750007500070000700007000070000700
+000800001255012500145500050016550005001955000500165000050016550005001955019550195501955019550195501955000500005000050000500005000050000500005000050000500005000050000500
