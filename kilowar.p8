@@ -179,9 +179,17 @@ function _update60()
 		update_raceover()
 	elseif mode == "matchover" then
 		update_matchover()
+	elseif mode == "rules" then
+		update_rules()
 	else
 		update_sash()
 		update_game()
+	end
+end
+
+function update_rules()
+	if btnp(4) then
+		mode = "start"
 	end
 end
 
@@ -197,6 +205,9 @@ function update_start()
 		if difficulty > 3 then
 			difficulty = 1
 		end
+	end
+	if btnp(4) then
+		mode = "rules"
 	end
 	if btnp(5) then
 		mode = "game"
@@ -806,9 +817,75 @@ function _draw()
 		draw_raceover()
 	elseif mode == "matchover" then
 		draw_matchover()
+	 elseif mode == "rules" then
+ 		draw_rules()
 	else
 		draw_game()
 	end
+end
+
+function draw_rules()
+	cls()
+	print("race to 700km, extend to 1000km",2,1,10)
+	-- nums
+	spr(1,12,8)
+	spr(2,28,8)
+	spr(3,43,8)
+	spr(4,58,8)
+	spr(5,73,8)
+	spr(6,89,8)	
+	spr(7,103,8)
+	print("25",12,18,7)
+	print("50",28,18,7)
+	print("75",43,18,7)
+	print("100",56,18,7)
+	print("200",71,18,7)
+	print("go",88,18,7)	
+	print("stop",100,18,7)
+	print("**max two 200s per race**",13,28,10)
+	-- remedies
+	spr(17,1,41)
+	print("fix",12,41,7)
+	spr(10,26,41)
+	spr(18,46,41)
+	print("fix",57,41,7)
+	spr(9,71,41)
+	spr(19,91,41)
+	print("fix",102,41,7)
+	spr(8,116,41)
+	--safeties
+	spr(14,0,51)
+	print("prev",11,51,7)
+	spr(10,28,51)
+	spr(15,45,51)
+	print("prev",56,51,7)
+	spr(9,73,51)
+	spr(13,90,51)
+	print("prev",101,51,7)
+	spr(8,118,51)
+	-- coup fourre
+	print("use when attacked = coup fourre!",0,63,10)
+	pal(12,7)
+	pal(15,9)
+	spr(14,36,71)	
+	spr(15,56,71)	
+	spr(13,76,71)	
+	pal()
+	-- limits
+	spr(12,21,85)
+	print("sets",32,85,7)
+	spr(21,49,85)
+	spr(11,64,85)
+	print("clears",75,85,7)
+	spr(21,100,85)
+	-- emergency
+	spr(16,47,98)
+	pal(12,7)
+	pal(15,9)
+	spr(16,67,98)
+	pal()
+	print("fixes/prevs stop + speed limit",3,108,10)
+	print("🅾️: return to start screen",10,122,7)
 end
 
 function draw_matchover()
@@ -916,6 +993,7 @@ function draw_start()
 	end
 	print("cpu difficulty: "..diffchoices[difficulty].." ⬆️ ⬇️ ",10,85,7)
 	print("press ❎ to start",32,105,4)
+	print("press 🅾️ for rules",32,115,4)
 end
 
 function draw_game()
