@@ -4,18 +4,22 @@ __lua__
 --init functions
 
 --TODO:
-----5. w-l record save/clear
-----6. better sprites
-----7. card legend screen
+---- 1. instruction screen slide in/out
+---- 2. race end screen player/cpu scores slide in/out
+---- 3. add racetrack to game screen!
+---- 3. coup fourre sound effect
+---- 4. more visible coup fourre icon
+---- 5. more card sounds
+---- 6. better card selection (blow up sprite size?)
 
 function _init()
 	deck = shuffledeck()
-	playerbox = {x=0,y=90,xe=128,ye=100,col=3}
-	debugbox = {x=0,y=102,xe=128,ye=112,col=5}
-	cpubox = {x=0,y=114,xe=128,ye=124,col=4}
+	playerbox = {x=0,y=86,xe=128,ye=96,col=3}
+	debugbox = {x=0,y=98,xe=128,ye=114,col=5}
+	cpubox = {x=0,y=115,xe=128,ye=125,col=4}
 	playerptrbox = {x=10,y=30,xe=80,ye=40,col=0}
-	player = {name="player",col=3,hand={},score=0,total=0,cfs=0,num200s=0,limit=false,upcard=nil,prevupcard=nil,safeties={},cardy=20,box=playerbox}
-	cpu = {name="cpu",col=4,hand={},score=0,total=0,cfs=0,num200s=0,limit=false,upcard=nil,prevupcard=nil,safeties={},cardy=60,box=cpubox,skill=1}
+	player = {name="player",col=3,hand={},score=0,total=0,cfs=0,num200s=0,limit=false,upcard=nil,prevupcard=nil,safeties={},cardy=20,box=playerbox,carx=1,cary=90,cardx=0}
+	cpu = {name="cpu",col=4,hand={},score=0,total=0,cfs=0,num200s=0,limit=false,upcard=nil,prevupcard=nil,safeties={},cardy=60,box=cpubox,carx=1,cary=99,cardx=0}
 	dealt = false
 	stdgoal = 700
 	extgoal = 1000
@@ -39,9 +43,11 @@ function _init()
 	hurtplay = 0
 	helpplay = 0
 	cardplayspeed = 0.025
+	carspeed = 0.5
+	cardestx = -1
 	mode = "start"
 	playercardptr = 1
-	deckx = 100
+	deckx = 98
 	decky = 78
 	limitx = 94
 	cardtargetx = -1
@@ -61,7 +67,6 @@ function _init()
 
 	-- debugging
 	debug = ""
-	cpudebug = ""
 	
 	winname = ""
 	winscore = 0
@@ -78,6 +83,18 @@ function _init()
 	cheat = false
 	palt(14,true)
 	palt(0,false)
+	
+	-- coup fourre banner
+	sash_w=0
+	sash_dw=0
+	sash_tx=0
+	sash_tdx=0
+	sash_c=8
+	sash_tc=7
+	sash_frames=0
+	sash_v=false
+	sash_delay_w=0
+	sash_delay_t=0
 	
 	-- graphical juice!
 	pcx = -200
@@ -164,6 +181,7 @@ function _update60()
 	elseif mode == "matchover" then
 		update_matchover()
 	else
+		update_sash()
 		update_game()
 	end
 end
@@ -216,13 +234,13 @@ function update_game()
 	elseif #racewinner > 0 then
 		if curgoal == stdgoal then
 			if racewinner == "player" then
-				debug = "press ⬆️ to extend to 1000"
-				cpudebug = "press ⬇️ to end the race now"
+				debug = "⬆️ = extend ⬇️ = end"
 				if btnp(2) then
 					curgoal = extgoal
+					player.carx = player.score * 0.128
+					cpu.carx = cpu.score * 0.128
 					debug = "player extends to 1000!"
 					calledext = "player"
-					cpudebug = ""
 					racewinner = ""
 				end
 				if btnp(3) then
@@ -257,9 +275,10 @@ function update_game()
 					extdraw = flr(rnd(100))+1
 					if extdraw > extfloor then
 						curgoal = extgoal
+						player.carx = player.score * 0.128
+						cpu.carx = cpu.score * 0.128
 						debug = "cpu extends to 1000!"
 						calledext = "cpu"
-						cpudebug = ""
 						racewinner = ""
 					else
 						player.total += playerraceoverpoints
@@ -284,7 +303,6 @@ function update_game()
 						curgoal = extgoal
 						debug = "cpu extends to 1000!"
 						calledext = "cpu"
-						cpudebug = ""
 						racewinner = ""
 					else
 						player.total += playerraceoverpoints
@@ -355,7 +373,7 @@ function update_game()
 				end
 				
 				if flr(rnd(100))+1 > cffloor then
-					cpudebug = "~~~~~coup fourre!~~~~~"
+					showsash("coupe fourre!",cpu.col,7)
 					playcoupfourre(cpu,player)
 					playinprogress = false
 					turninprogress = false
@@ -365,6 +383,7 @@ function update_game()
 			else
 				-- player can coup fourre
 				if btnp(2) then
+					showsash("coupe fourre!",player.col,7)
 					playcoupfourre(player,cpu)
 					playinprogress = false
 					turninprogress = false
@@ -372,8 +391,6 @@ function update_game()
 					iscf = true
 				end
 			end
-		elseif cpudebug != "~~~~~coup fourre!~~~~~" then
-			cpudebug = ""
 		end
 	
 		if not turninprogress and not drawupinprogress then
@@ -488,7 +505,16 @@ function update_game()
 				playedcard.y = cardtargety
 				playedcard.dy = 0
 			end
-			if playedcard.dx == 0 and playedcard.dy == 0 then
+			-- animate the current players car if needed
+			if currentplayer.cardx > 0 and currentplayer.carx < cardestx then
+				currentplayer.carx += currentplayer.cardx
+				if currentplayer.carx >= cardestx then
+					currentplayer.carx = cardestx
+					currentplayer.cardx = 0
+					cardestx = -1
+				end
+			end
+			if playedcard.dx == 0 and playedcard.dy == 0 and currentplayer.cardx == 0 then
 				playedcard = nil
 				discardedcard = nil
 				playedcardtarget = nil
@@ -498,9 +524,6 @@ function update_game()
 				discardinprogress = false
 				turninprogress = false
 				drawupinprogress = false
-			end
-			if not cancf then
-				cpudebug = ""
 			end
 		else
 			if currentplayer.name==player.name then
@@ -752,6 +775,40 @@ function update_game()
 		end
 	end
 end
+
+function update_sash()
+	if sash_v then
+		sash_frames+=1
+		--animate width
+		if sash_delay_w>0 then
+			sash_delay_w-=1 
+		else
+			sash_w+=(sash_dw-sash_w)/5
+			if abs(sash_dw-sash_w)<0.3 then
+				sash_w=sash_dw
+			end
+		end
+		--animate text
+		if sash_delay_t>0 then
+			sash_delay_t-=1
+		else 
+			sash_tx+=(sash_tdx-sash_tx)/10
+			if abs(sash_tx-sash_tdx)<0.3 then
+				sash_tx=sash_tdx
+			end
+		end
+		--make sash go away
+		if sash_frames==75 then
+			sash_dw=0
+			sash_tdx=160
+			sash_delay_w=15
+			sash_delay_t=0
+		end
+		if sash_frames>115 then
+			sash_v=false
+		end
+	end
+end
 -->8
 --draw functions
 function _draw()
@@ -888,17 +945,25 @@ function draw_game()
 	rectfill(playerbox.x,playerbox.y,playerbox.xe,playerbox.ye,playerbox.col)
 	rectfill(playerptrbox.x,playerptrbox.y,playerptrbox.xe,playerptrbox.ye,playerptrbox.col)
 	rectfill(cpubox.x,cpubox.y,cpubox.xe,cpubox.ye,cpubox.col)
-	rectfill(debugbox.x,debugbox.y,debugbox.xe,debugbox.ye,debugbox.col)
+	sspr(80,64,16,16,debugbox.x,debugbox.y,debugbox.xe - debugbox.x,debugbox.ye - debugbox.y)
+	spr(23,120,debugbox.y)
+	spr(23,120,debugbox.y+8)
+	sspr(80,80,16,16,player.carx, player.cary)
+	sspr(96,80,16,16,cpu.carx, cpu.cary)
+
 	if currentplayer.name == player.name then
 		print("❎",14+(10*(playercardptr-1)),30,player.col)
 	else
 		print("❎",14+(10*(playercardptr-1)),30,0)
 	end
-	if cpudebug != "" then
-		print(cpudebug,5,debugbox.y+2,10)
-	end
 	spr(20,deckx,decky)
 	print("="..#deck,109,80,10)
+	if playedcard != nil then
+		vlu = playedcard.value
+	else
+		vlu = 0
+	end
+--	debug = "px="..player.carx.." cx="..cpu.carx.." vlu="..vlu
 	if debug != "" then
 		print(debug,5,playerbox.y+2,10)
 	else
@@ -982,9 +1047,32 @@ function draw_game()
 			spr(20,drawncard.x,drawncard.y)
 		end
 	end
+	draw_sash()
 end
+
+function draw_sash()
+	if sash_v then
+		rectfill(0,64-sash_w,128,64+sash_w,sash_c)
+		print(sash_text,sash_tx,62,sash_tc)
+	end
+end
+
 -->8
 -- utility functions
+function showsash(_t,_c,_tc)
+	sash_w=0
+	sash_dw=4
+	sash_c=_c
+	sash_text=_t
+	sash_frames=0
+	sash_v=true
+	sash_tx=-#sash_text*4
+	sash_tdx=64-(#sash_text*2)
+	sash_delay_w=0
+	sash_delay_t=5
+	sash_tc=_tc
+end
+
 function newmatch()
 	player.total=0
 	cpu.total=0
@@ -1010,6 +1098,11 @@ function newrace()
 	cpu.upcard=nil
 	player.prevupcard=nil
 	cpu.prevupcard=nil
+	player.carx=1
+	cpu.carx=1
+	player.cardx=0
+	cpu.cardx=0
+	cardestx=-1
 	playercardptr=1
 	currentplayer = {name="nobody"}
 	turninprogress = false
@@ -1026,7 +1119,6 @@ function newrace()
 	helpplay = 0
 	deck=shuffledeck()
 	debug=""
-	cpudebug=""
 	racewinner=""
 	raceover=false
 	playerraceoverpoints=0
@@ -1047,6 +1139,16 @@ function newrace()
 	winsafe = 0
 	winext = 0
 	wincol = 7
+	sash_w=0
+	sash_dw=0
+	sash_tx=0
+	sash_tdx=0
+	sash_c=8
+	sash_tc=7
+	sash_frames=0
+	sash_v=false
+	sash_delay_w=0
+	sash_delay_t=0
 end
 
 function draw_up(_curplayer)
@@ -1117,6 +1219,9 @@ function animatecard(_card,_cardplayer,_otherplayer)
 	if _card.type == "n" or _card.type == "g" or _card.type == "r" or (_card.type == "f" and _card.name != "emergency" and _cardplayer.upcard != nil and _cardplayer.upcard.safety == _card.name) then
 		cardtargetx = _cardplayer.box.x + 5
 		cardtargety = _cardplayer.box.y + 2
+		if _card.type == "n" then
+			animatecar(_cardplayer,_card.value)
+		end
 		playedcardtarget = _cardplayer
 	elseif _card.type == "s" or _card.type == "h" then
 		cardtargetx = _otherplayer.box.x + 5
@@ -1137,6 +1242,21 @@ function animatecard(_card,_cardplayer,_otherplayer)
 	end
 	_card.dx = cardplayspeed * (cardtargetx - _card.x)
 	_card.dy = cardplayspeed * (cardtargety - _card.y)
+end
+
+function animatecar(_player,_value)
+	if curgoal == stdgoal then
+		movefactor = 0.1829
+	else
+		movefactor = 0.128
+	end
+	
+	cardestx = _player.carx + (_value * movefactor)
+	if cardestx > 128 then
+		cardestx = 128
+	end
+--	debug = "oldx= " .. _player.carx .. "newx= " .. cardestx
+	_player.cardx = carspeed
 end
 
 function hassafety(_player,_safety)
@@ -1469,14 +1589,14 @@ __gfx__
 007007006777777667737776677337766773337667733336b77bb77b85855858850000588505502885999958b7b7777b85888558cff0affcc0ff0f0cc0fffffc
 000000006737777667337776673337766733337667333336b777777b88555588855555588555554885555558bb77777b85555558cffffffccffffffcc0fffffc
 000000006666666666666666666666666666666666666666bbbbbbbb88888888888888888888888888888888bbbbbbbb88888888cccccccccccccccccccccccc
-ccccccccbbbbbbbbbbbbbbbbbbbbbbbb111111118888888807070707000000000000000000000000000000000000000000000000000000000000000000000000
-cffffffcb777777bb777777bb777777b129292918778777870707070000000000000000000000000000000000000000000000000000000000000000000000000
-cffffffcb777707bb776767bb770077b192929218788787807070707000000000000000000000000000000000000000000000000000000000000000000000000
-cf8811fcb777077bb776667bb706607b129292918778787870707070000000000000000000000000000000000000000000000000000000000000000000000000
-cf8811fcb788877bb777677bb706607b192929218878787807070707000000000000000000000000000000000000000000000000000000000000000000000000
-c000000cb788877bb777677bb770077b129292918778777870707070000000000000000000000000000000000000000000000000000000000000000000000000
-cffffffcb788877bb777677bb777777b192929218888888807070707000000000000000000000000000000000000000000000000000000000000000000000000
-ccccccccbbbbbbbbbbbbbbbbbbbbbbbb111111118888888870707070000000000000000000000000000000000000000000000000000000000000000000000000
+ccccccccbbbbbbbbbbbbbbbbbbbbbbbb111111118888888807070707eeee07070000000000000000000000000000000000000000000000000000000000000000
+cffffffcb777777bb777777bb777777b129292918778777870707070eeee70700000000000000000000000000000000000000000000000000000000000000000
+cffffffcb777707bb776767bb770077b192929218788787807070707eeee07070000000000000000000000000000000000000000000000000000000000000000
+cf8811fcb777077bb776667bb706607b129292918778787870707070eeee70700000000000000000000000000000000000000000000000000000000000000000
+cf8811fcb788877bb777677bb706607b192929218878787807070707eeee07070000000000000000000000000000000000000000000000000000000000000000
+c000000cb788877bb777677bb770077b129292918778777870707070eeee70700000000000000000000000000000000000000000000000000000000000000000
+cffffffcb788877bb777677bb777777b192929218888888807070707eeee07070000000000000000000000000000000000000000000000000000000000000000
+ccccccccbbbbbbbbbbbbbbbbbbbbbbbb111111118888888870707070eeee70700000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -1525,38 +1645,38 @@ eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000e033333333333333
 0000000000000000000000000000000000000000000000000000000000000000eeeeee000eeeeeeeeeeee000eeeeeeeeeeeeee000eeeeeeeeeeee000eeeeeeee
 0000000000000000000000000000000000000000000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 0000000000000000000000000000000000000000000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeee00eeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeee0660eeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeee06666000eeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-aaaa55aaaa55aaaa55aaaa55aaaa55aa00000000eeeeeee00666676660eeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeee067766776760eeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeee067600676660eeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeee000ee0666660eeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeee06000eeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeee0e89eeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeee89e9eeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeee89e8eeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeee9eeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000a5aa5aa5aa5aa5aa00000000000000000000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeee00eeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
+5555555555555555555555555555555500000000eeeeeeeeee0660eeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
+5555555555555555555555555555555500000000eeeeeeeee06666000eeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
+aaaa55aaaa55aaaa55aaaa55aaaa55aa00000000eeeeeee00666676660eeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
+5555555555555555555555555555555500000000eeeeeee067766776760eeeeeeeeeeeee00000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000
+5555555555555555555555555555555500000000eeeeeeee067600676660eeeeeeeeeeee00000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000
+5555555555555555555555555555555500000000eeeeeeeee000ee0666660eeeeeeeeeee00000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeee06000eeeeeeeeeeee00000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeee0e89eeeeeeeeeeee00000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeee89e9eeeeeeeeeee00000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeee89e8eeeeeeeeeeee00000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeee9eeeeeeeeeeeee00000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000ee0000000eeeeeeeee0000000eeeeeee0000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000e033330cc0eeeeeee044440cc0eeeeee0000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000003333330cc0000ee04444440cc0000ee0000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000033333330033370e044444440044470e0000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000033033333330330e044044444440440e0000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000ee060e000e060eeeee060e000e060eee0000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000eee0eeeeeee0eeeeeee0eeeeeee0eeee0000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000
 __sfx__
 0001000007550095500b5502000000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500
 0005000007750087500c75010750147501b750257502c750007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700
