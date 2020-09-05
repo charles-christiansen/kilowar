@@ -4,10 +4,8 @@ __lua__
 --init functions
 
 --TODO:
----- 2. race end screen player/cpu scores slide in/out
 ---- 4. more visible coup fourre icon
 ---- 5. more card sounds
----- 6. better card selection (blow up sprite size?)
 
 function _init()
 	deck = shuffledeck()
@@ -422,6 +420,10 @@ function update_game()
 				end
 			end
 			draw_up(currentplayer)
+			if currentplayer.name==player.name then
+				player.hand[playercardptr].x -= 1
+				player.hand[playercardptr].y -= 2
+			end
 			if iscf then
 				multidraw = true
 			else
@@ -465,7 +467,7 @@ function update_game()
 					drawupinprogress = false
 				end
 			else
-				drawncard = nil
+--				drawncard = nil
 				playedcard = nil
 				discardedcard = nil
 				playedcardtarget = nil
@@ -547,17 +549,25 @@ function update_game()
 		else
 			if currentplayer.name==player.name then
 				if btnp(1) then
+					player.hand[playercardptr].x += 1
+					player.hand[playercardptr].y += 2
 					playercardptr += 1
 					if playercardptr > #(player.hand) then
 						playercardptr = 1
 					end
+					player.hand[playercardptr].x -= 1
+					player.hand[playercardptr].y -= 2
 					debug=""
 					sfx(0)
 				elseif btnp(0) then
+					player.hand[playercardptr].x += 1
+					player.hand[playercardptr].y += 2
 					playercardptr -= 1
 					if playercardptr == 0 then
 						playercardptr = #(player.hand)
 					end
+					player.hand[playercardptr].x -= 1
+					player.hand[playercardptr].y -= 2
 					debug=""
 					sfx(0)
 				elseif btnp(5) then
