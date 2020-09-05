@@ -15,7 +15,6 @@ __lua__
 function _init()
 	deck = shuffledeck()
 	playerbox = {x=0,y=86,xe=128,ye=96,col=3}
-	debugbox = {x=0,y=98,xe=128,ye=114,col=5}
 	cpubox = {x=0,y=115,xe=128,ye=125,col=4}
 	playerptrbox = {x=10,y=30,xe=80,ye=40,col=0}
 	player = {name="player",col=3,hand={},score=0,total=0,cfs=0,num200s=0,limit=false,upcard=nil,prevupcard=nil,safeties={},cardy=20,box=playerbox,carx=1,cary=90,cardx=0}
@@ -58,9 +57,10 @@ function _init()
 	raceover = false
 	matchover = false
 	
-	-- normal difficulty
+	-- normal difficulty is default
 	difficulty = 2
 	diffchoices = {"easy","normal","hard"}
+	cffloors = {40,25,5}
 	
 	playerraceoverpoints = 0
 	cpuraceoverpoints = 0
@@ -271,9 +271,8 @@ function update_game()
 					end
 				elseif difficulty == 2 then
 					-- normal cpu will extend only 50% of the time
-					extfloor = 50
 					extdraw = flr(rnd(100))+1
-					if extdraw > extfloor then
+					if extdraw > 50 then
 						curgoal = extgoal
 						player.carx = player.score * 0.128
 						cpu.carx = cpu.score * 0.128
@@ -361,18 +360,7 @@ function update_game()
 		if cancf then
 			if currentplayer.name==player.name then
 				-- cpu can coup fourre
-				if difficulty == 1 then
-					-- easy cpu will call it 60% of the time
-					cffloor = 40
-				elseif difficulty == 2 then
-					-- normal cpu will call it 75% of the time
-					cffloor = 25
-				else
-					-- hard cpu will call it 95% of the time
-					cffloor = 5
-				end
-				
-				if flr(rnd(100))+1 > cffloor then
+				if flr(rnd(100))+1 > cffloors[difficulty] then
 					showsash("coupe fourre!",cpu.col,7)
 					playcoupfourre(cpu,player)
 					playinprogress = false
@@ -945,9 +933,9 @@ function draw_game()
 	rectfill(playerbox.x,playerbox.y,playerbox.xe,playerbox.ye,playerbox.col)
 	rectfill(playerptrbox.x,playerptrbox.y,playerptrbox.xe,playerptrbox.ye,playerptrbox.col)
 	rectfill(cpubox.x,cpubox.y,cpubox.xe,cpubox.ye,cpubox.col)
-	sspr(80,64,16,16,debugbox.x,debugbox.y,debugbox.xe - debugbox.x,debugbox.ye - debugbox.y)
-	spr(23,120,debugbox.y)
-	spr(23,120,debugbox.y+8)
+	sspr(80,64,16,16,0,98,128,16)
+	spr(23,120,98)
+	spr(23,120,106)
 	sspr(80,80,16,16,player.carx, player.cary)
 	sspr(96,80,16,16,cpu.carx, cpu.cary)
 
