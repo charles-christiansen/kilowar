@@ -510,14 +510,14 @@ function update_game()
 						playercardptr = 1
 					end
 					debug=""
-					--sfx(0)
+					sfx(0)
 				elseif btnp(0) then
 					playercardptr -= 1
 					if playercardptr == 0 then
 						playercardptr = #(player.hand)
 					end
 					debug=""
-					--sfx(0)
+					sfx(0)
 				elseif btnp(5) then
 					if checkvalidplay(player,cpu,player.hand[playercardptr]) then
 						debug=""
@@ -529,7 +529,7 @@ function update_game()
 						if playercardptr > #(player.hand) then
 							playercardptr-=1
 						end
-						--sfx(playedcard.fx)
+						sfx(playedcard.fx)
 						playinprogress = true
 					else
 						debug = "invalid play: " .. player.hand[playercardptr].name
@@ -542,7 +542,7 @@ function update_game()
 						if playercardptr > #(player.hand) then
 							playercardptr-=1
 						end
-						--sfx(2)
+						sfx(2)
 						discardinprogress = true
 					end
 				end
@@ -562,7 +562,7 @@ function update_game()
 								cpu.prevupcard = cpu.upcard
 								playcard(cpu,player,cpu.hand[i])
 								animatecard(playedcard,cpu,player)
-								--sfx(playedcard.fx)
+								sfx(playedcard.fx)
 								safetyplay = 0
 								hurtplay = 0
 								helpplay = 0
@@ -581,7 +581,7 @@ function update_game()
 							cpu.prevupcard = cpu.upcard
 							playcard(cpu,player,cpu.hand[hurtplay])
 							animatecard(playedcard,cpu,player)
-							--sfx(playedcard.fx)
+							sfx(playedcard.fx)
 							safetyplay = 0
 							hurtplay = 0
 							helpplay = 0
@@ -601,7 +601,7 @@ function update_game()
 						cpu.prevupcard = cpu.upcard
 						playcard(cpu,player,cpu.hand[safetyplay])
 						animatecard(playedcard,cpu,player)
-						--sfx(playedcard.fx)
+						sfx(playedcard.fx)
 						safetyplay = 0
 						playinprogress = true
 					else
@@ -614,7 +614,7 @@ function update_game()
 									break
 								end
 							end
-							--sfx(2)
+							sfx(2)
 							discardinprogress = true
 						end
 					end
@@ -631,7 +631,7 @@ function update_game()
 								cpu.prevupcard = cpu.upcard
 								playcard(cpu,player,cpu.hand[i])
 								animatecard(playedcard,cpu,player)
-								--sfx(playedcard.fx)
+								sfx(playedcard.fx)
 								safetyplay = 0
 								playinprogress = true
 								return
@@ -651,7 +651,7 @@ function update_game()
 						cpu.prevupcard = cpu.upcard
 						playcard(cpu,player,cpu.hand[safetyplay])
 						animatecard(playedcard,cpu,player)
-						--sfx(playedcard.fx)
+						sfx(playedcard.fx)
 						safetyplay = 0
 						playinprogress = true
 					else
@@ -664,7 +664,7 @@ function update_game()
 									break
 								end
 							end
-							--sfx(2)
+							sfx(2)
 							discardinprogress = true
 						end
 					end
@@ -685,7 +685,7 @@ function update_game()
 								cpu.prevupcard = cpu.upcard
 								playcard(cpu,player,cpu.hand[i])
 								animatecard(playedcard,cpu,player)
-								--sfx(playedcard.fx)
+								sfx(playedcard.fx)
 								safetyplay = 0
 								hurtplay = 0
 								helpplay = 0
@@ -702,7 +702,7 @@ function update_game()
 						cpu.prevupcard = cpu.upcard
 						playcard(cpu,player,cpu.hand[helpplay])
 						animatecard(playedcard,cpu,player)
-						--sfx(playedcard.fx)
+						sfx(playedcard.fx)
 						safetyplay = 0
 						hurtplay = 0
 						helpplay = 0
@@ -721,7 +721,7 @@ function update_game()
 						cpu.prevupcard = cpu.upcard
 						playcard(cpu,player,cpu.hand[safetyplay])
 						animatecard(playedcard,cpu,player)
-						--sfx(playedcard.fx)
+						sfx(playedcard.fx)
 						safetyplay = 0
 						playinprogress = true
 					else
@@ -738,7 +738,7 @@ function update_game()
 									break
 								end
 							end
-							--sfx(2)
+							sfx(2)
 							if todiscard > 0 then
 								discard(cpu,cpu.hand[todiscard])
 							else
@@ -1560,11 +1560,11 @@ aaaa55aaaa55aaaa55aaaa55aaaa55aa00000000eeeeeee00666676660eeeeeeeeeeeeee00000000
 __sfx__
 0001000007550095500b5502000000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500
 0005000007750087500c75010750147501b750257502c750007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700
-0005000029250242501e25017250142501a2502425000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0008000017750167501475012750117500f7500d7500c750007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700
 0010000026650206501a6501363005630056200562004610046100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000400000c55009550065500365002650006500065000650006300063000620006200061000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-002000002c0502c0102c0102c0002c0502c0102c0102c0002c0502c0102c0102c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+002000002c0502c0102c0102c0002c0502c0102c0102c0002c0002c0002c0002c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000002c5502a5502855026550235501f5501b550175501f5000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500
 0010000016550185501b5501e550205502255024550265501f5000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500
-001800002425024250182501825024250242501825018250000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001800002422024220182201822024220242201822018220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000200000b7500a7500a7500975007750067500675003750047500475004750037500375003750037500375003750027500275001750007500175000750007500075000750007500070000700007000070000700
