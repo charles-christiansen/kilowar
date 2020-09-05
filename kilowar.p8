@@ -6,7 +6,6 @@ __lua__
 --TODO:
 ---- 1. instruction screen slide in/out
 ---- 2. race end screen player/cpu scores slide in/out
----- 3. add racetrack to game screen!
 ---- 3. coup fourre sound effect
 ---- 4. more visible coup fourre icon
 ---- 5. more card sounds
@@ -795,6 +794,7 @@ function update_sash()
 		if sash_frames>115 then
 			sash_v=false
 		end
+		sash_tc = cfblinktimercols[cfblinktimer]
 	end
 end
 -->8
