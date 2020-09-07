@@ -301,8 +301,8 @@ function update_game()
 				debug = "⬆️ = extend ⬇️ = end"
 				if btnp(2) then
 					curgoal = extgoal
-					player.carx = player.score * 0.128
-					cpu.carx = cpu.score * 0.128
+					player.carx = player.score * 0.112
+					cpu.carx = cpu.score * 0.112
 					debug = "player extends to 1000!"
 					calledext = "player"
 					racewinner = ""
@@ -338,8 +338,8 @@ function update_game()
 					extdraw = flr(rnd(100))+1
 					if extdraw > 50 then
 						curgoal = extgoal
-						player.carx = player.score * 0.128
-						cpu.carx = cpu.score * 0.128
+						player.carx = player.score * 0.112
+						cpu.carx = cpu.score * 0.112
 						debug = "cpu extends to 1000!"
 						calledext = "cpu"
 						racewinner = ""
@@ -451,6 +451,7 @@ function update_game()
 	
 		if not turninprogress and not drawupinprogress then
 			playinprogress = false
+			cancf = false
 			if not multidraw then
 				if currentplayer.name==player.name then
 					currentplayer = cpu
@@ -468,9 +469,8 @@ function update_game()
 			else
 				multidraw = false
 			end
-			drawupinprogress = true
-			cancf = false
 			iscf = false
+			drawupinprogress = true
 		end
 		if drawupinprogress then
 			if drawncard != nil then
@@ -1128,7 +1128,7 @@ function draw_game()
 	else
 		vlu = 0
 	end
---	debug = "px="..player.carx.." cx="..cpu.carx.." vlu="..vlu
+
 	if debug != "" then
 		print(debug,5,playerbox.y+2,10)
 	else
@@ -1412,13 +1412,13 @@ end
 
 function animatecar(_player,_value)
 	if curgoal == stdgoal then
-		movefactor = 0.1829
+		movefactor = 0.16
 	else
-		movefactor = 0.128
+		movefactor = 0.112
 	end
 	
 	cardestx = _player.carx + (_value * movefactor)
-	if cardestx > 128 then
+	if cardestx + 1 > 112 then
 		cardestx = 128
 	end
 	_player.cardx = carspeed
