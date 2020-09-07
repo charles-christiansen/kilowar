@@ -18,7 +18,7 @@ function _init()
 	stdgoal = 700
 	extgoal = 1000
 	curgoal = 700
-	totalgoal = 5000
+	totalgoal = 1000
 	currentplayer = {name="nobody"}
 	calledext = "nobody"
 	turninprogress = false
@@ -60,6 +60,11 @@ function _init()
 	
 	playerraceoverpoints = 0
 	cpuraceoverpoints = 0
+	raceovertc = 7
+	raceoverblinktimer = 1
+	bordertimer = 0
+	borderspr = 22
+	flagx = 96
 
 	-- debugging
 	debug = ""
@@ -88,7 +93,7 @@ function _init()
 	loseext = 0
 	losecol = 7
 
-	cheat = false
+	cheat = true
 	palt(14,true)
 	palt(0,false)
 	
@@ -224,6 +229,23 @@ function update_start()
 end
 
 function update_raceover()
+	raceovertc = cfblinktimercols[raceoverblinktimer]
+	borderspr = 22 + flr(bordertimer / 30)
+	if bordertimer % 20 == 0 then
+		if flagx == 96 then
+			flagx = 112
+		else
+			flagx = 96
+		end
+	end
+	raceoverblinktimer += 1
+	if raceoverblinktimer % 12 == 0 then
+		raceoverblinktimer = 1
+	end
+	bordertimer += 1
+	if bordertimer > 59 then
+		bordertimer = 0
+	end
 	if btnp(0) then
 		romode = "winner"
 	end
@@ -237,6 +259,23 @@ function update_raceover()
 end
 
 function update_matchover()
+	raceovertc = cfblinktimercols[raceoverblinktimer]
+	borderspr = 22 + flr(bordertimer / 30)
+	if bordertimer % 20 == 0 then
+		if flagx == 96 then
+			flagx = 112
+		else
+			flagx = 96
+		end
+	end
+	raceoverblinktimer += 1
+	if raceoverblinktimer % 12 == 0 then
+		raceoverblinktimer = 1
+	end
+	bordertimer += 1
+	if bordertimer > 59 then
+		bordertimer = 0
+	end
 	if btnp(5) then
 		newmatch()
 		mode = "game"
@@ -386,26 +425,26 @@ function update_game()
 			if currentplayer.name==player.name then
 				-- cpu can coup fourre
 				if flr(rnd(100))+1 > cffloors[difficulty] then
-					sfx(-1)
-					sfx(10)
-					showsash("coupe fourre!",cpu.col,7)
 					playcoupfourre(cpu,player)
 					playinprogress = false
 					turninprogress = false
 					cancf = false
 					iscf = true
+					sfx(-1)
+					sfx(10)
+					showsash("coupe fourre!",cpu.col,7)
 				end
 			else
 				-- player can coup fourre
 				if btnp(2) then
-					sfx(-1)
-					sfx(10)
-					showsash("coupe fourre!",player.col,7)
 					playcoupfourre(player,cpu)
 					playinprogress = false
 					turninprogress = false
 					cancf = false
 					iscf = true
+					sfx(-1)
+					sfx(10)
+					showsash("coupe fourre!",player.col,7)
 				end
 			end
 		end
@@ -420,7 +459,7 @@ function update_game()
 				end
 			end
 			draw_up(currentplayer)
-			if currentplayer.name==player.name then
+			if currentplayer.name==player.name and player.hand[playercardptr].y == player.cardy then
 				player.hand[playercardptr].x -= 1
 				player.hand[playercardptr].y -= 2
 			end
@@ -584,7 +623,9 @@ function update_game()
 						sfx(playedcard.fx)
 						playinprogress = true
 					else
-						debug = "invalid play: " .. player.hand[playercardptr].name
+						if debug == "" then
+							debug = "invalid play: " .. player.hand[playercardptr].name
+						end
 					end
 				elseif btnp(4) then
 					if player.hand[playercardptr].type == "f" then
@@ -608,7 +649,6 @@ function update_game()
 							elseif cpu.hand[i].type == "h" or cpu.hand[i].type == "s" or cpu.hand[i].type == "l" then
 								hurtplay = i
 							else
-								debug=""
 								playedcard = cpu.hand[i]
 								player.prevupcard = player.upcard
 								cpu.prevupcard = cpu.upcard
@@ -619,6 +659,7 @@ function update_game()
 								hurtplay = 0
 								helpplay = 0
 								playinprogress = true
+								debug=""
 								return
 							end
 						end
@@ -627,7 +668,6 @@ function update_game()
 					if hurtplay > 0 then
 						-- give easy cpu a 50% chance of playing a harm card
 						if flr(rnd(100))+1 > 50 then
-							debug=""
 							playedcard = cpu.hand[hurtplay]
 							player.prevupcard = player.upcard
 							cpu.prevupcard = cpu.upcard
@@ -638,6 +678,7 @@ function update_game()
 							hurtplay = 0
 							helpplay = 0
 							playinprogress = true
+							debug=""
 							return
 						end
 					end
@@ -647,7 +688,6 @@ function update_game()
 					-- is the matching hazard
 					-- otherwise save them for coup fourre!
 					if safetyplay > 0 and ((cpu.upcard != nil and cpu.upcard.safety == cpu.hand[safetyplay].name) or #deck < 53) then
-						debug=""
 						playedcard = cpu.hand[safetyplay]
 						player.prevupcard = player.upcard
 						cpu.prevupcard = cpu.upcard
@@ -658,7 +698,6 @@ function update_game()
 						playinprogress = true
 					else
 						-- cpu is unable to play, needs to discard
-						debug=""
 						if #cpu.hand > 0 then
 							for i=1,#(cpu.hand) do
 								if cpu.hand[i].type != "f" or #cpu.hand < 5 then
@@ -670,6 +709,7 @@ function update_game()
 							discardinprogress = true
 						end
 					end
+					debug=""
 				elseif difficulty == 2 then
 					---- 2 = normal (plays first playable card)
 					for i=1,#(cpu.hand) do
@@ -677,7 +717,6 @@ function update_game()
 							if cpu.hand[i].type == "f" and ((player.score < 600 and curgoal == stdgoal) or (player.score < 900 and curgoal == extgoal) or #deck == 0) then
 								safetyplay = i
 							else
-								debug=""
 								playedcard = cpu.hand[i]
 								player.prevupcard = player.upcard
 								cpu.prevupcard = cpu.upcard
@@ -686,6 +725,7 @@ function update_game()
 								sfx(playedcard.fx)
 								safetyplay = 0
 								playinprogress = true
+								debug=""
 								return
 							end
 						end
@@ -695,9 +735,7 @@ function update_game()
 					-- for the first half of the deck unless the upcard
 					-- is the matching hazard
 					-- otherwise save them for coup fourre!
-					-- !!!TODO: add difficulty level
 					if safetyplay > 0 and ((cpu.upcard != nil and cpu.upcard.safety == cpu.hand[safetyplay].name) or #deck < 53) then
-						debug=""
 						playedcard = cpu.hand[safetyplay]
 						player.prevupcard = player.upcard
 						cpu.prevupcard = cpu.upcard
@@ -708,7 +746,6 @@ function update_game()
 						playinprogress = true
 					else
 						-- cpu is unable to play, needs to discard
-						debug=""
 						if #cpu.hand > 0 then
 							for i=1,#(cpu.hand) do
 								if cpu.hand[i].type != "f" or #cpu.hand < 5 then
@@ -720,6 +757,7 @@ function update_game()
 							discardinprogress = true
 						end
 					end
+					debug=""
 				else
 					---- 3 = hard (plays to stop player when possible)
 					for i=1,#(cpu.hand) do
@@ -731,7 +769,6 @@ function update_game()
 							elseif cpu.hand[i].type == "n" and cpu.hand[i].value + cpu.score != curgoal then
 								helpplay = i
 							else
-								debug=""
 								playedcard = cpu.hand[i]
 								player.prevupcard = player.upcard
 								cpu.prevupcard = cpu.upcard
@@ -742,13 +779,13 @@ function update_game()
 								hurtplay = 0
 								helpplay = 0
 								playinprogress = true
+								debug=""
 								return
 							end
 						end
 					end
 
 					if helpplay > 0 then
-						debug=""
 						playedcard = cpu.hand[helpplay]
 						player.prevupcard = player.upcard
 						cpu.prevupcard = cpu.upcard
@@ -759,6 +796,7 @@ function update_game()
 						hurtplay = 0
 						helpplay = 0
 						playinprogress = true
+						debug=""
 						return
 					end
 					
@@ -767,7 +805,6 @@ function update_game()
 					-- is the matching hazard
 					-- otherwise save them for coup fourre!
 					if safetyplay > 0 and ((cpu.upcard != nil and cpu.upcard.safety == cpu.hand[safetyplay].name) or #deck < 27) then
-						debug=""
 						playedcard = cpu.hand[safetyplay]
 						player.prevupcard = player.upcard
 						cpu.prevupcard = cpu.upcard
@@ -778,7 +815,6 @@ function update_game()
 						playinprogress = true
 					else
 						-- cpu is unable to play, needs to discard
-						debug=""
 						todiscard=0
 						if #cpu.hand > 0 then
 							for i=1,#(cpu.hand) do
@@ -799,6 +835,7 @@ function update_game()
 							discardinprogress = true
 						end
 					end
+					debug=""
 				end
 			end
 		end
@@ -915,91 +952,110 @@ function draw_rules()
 	pal(15,9)
 	spr(16,67,98)
 	pal()
+	palt(14,true)
+	palt(0,false)
 	print("fixes/prevs stop + speed limit",3,108,10)
 	print("🅾️: return to start screen",10,122,7)
 end
 
 function draw_matchover()
 	cls()
-	spr(22,0,0)
+	spr(borderspr,0,0)
 	for i=1,15 do
-		spr(22,i*8,0)
-		spr(22,0,i*8)
-		spr(22,120,i*8)
-		spr(22,i*8,120)
+		spr(borderspr,i*8,0)
+		spr(borderspr,0,i*8)
+		spr(borderspr,120,i*8)
+		spr(borderspr,i*8,120)
 	end
-	print("***** "..matchwinner.." wins! *****",10,10,7)
-	print("final scores",30,30,7)
+	print("***** "..matchwinner.." wins! *****",23 - #matchwinner,14,raceovertc)
+	print("final scores",41,30,7)
+	sspr(flagx,64,16,16,95,40)
+	sspr(flagx,64,16,16,15,40)
 	if matchwinner == "player" then
-		print("player: "..player.total,10,40,player.col)
-		print("cpu: "..cpu.total,10,48,cpu.col)
+		print("player: "..player.total,41,40,player.col)
+		print("cpu: "..cpu.total,41,48,cpu.col)
 	else
-		print("cpu: "..cpu.total,10,40,cpu.col)
-		print("player: "..player.total,10,48,player.col)
+		print("cpu: "..cpu.total,41,40,cpu.col)
+		print("player: "..player.total,41,48,player.col)
 	end
-	print("press ❎ to start a",10,63,4)
-	print("new match!",10,71,4)
-	print("press 🅾️ to",10,81,4)
-	print("restart kilowar!",10,89,4)
+	print("press ❎ to start",30,63,raceovertc)
+	print("a new match!",40,71,raceovertc)
+	print("press 🅾️ to",43,91,7)
+	print("restart kilowar!",33,99,7)
 end
 
 function draw_raceover()
 	cls()
+	spr(borderspr,0,0)
+	for i=1,15 do
+		spr(borderspr,i*8,0)
+		spr(borderspr,0,i*8)
+		spr(borderspr,120,i*8)
+		spr(borderspr,i*8,120)
+	end
 	if winname != "draw" then
 		if romode == "" then
 			romode = "winner"
 		end
+		print(winname.." wins!",12,9,raceovertc)
+		print(losename.." loses.",62,9,losecol)
 		if romode == "winner" then
-			print(winname.." wins!",5,5,wincol)
-			print("kilos: "..winscore,5,13,wincol)
-			print("win bonus: "..winpts,5,21,wincol)
-			print("safeties: "..winsft,5,29,wincol)
-			print("coup fourre: "..wincfs,5,37,wincol)
-			print("all 4 safeties: "..winall4,5,45,wincol)
-			print("shutout: "..winshut,5,53,wincol)
-			print("delayed win: "..windelay,5,61,wincol)
-			print("safe trip: "..winsafe,5,69,wincol)
-			print("extension: "..winext,5,77,wincol)
+			sspr(flagx,64,16,16,95,17)
+			print("kilos: "..winscore,12,17,wincol)
+			print("win bonus: "..winpts,12,25,wincol)
+			print("safeties: "..winsft,12,33,wincol)
+			print("coup fourre: "..wincfs,12,41,wincol)
+			print("all 4 safeties: "..winall4,12,49,wincol)
+			print("shutout: "..winshut,12,57,wincol)
+			print("delayed win: "..windelay,12,65,wincol)
+			print("safe trip: "..winsafe,12,73,wincol)
+			print("extension: "..winext,12,81,wincol)
+			if winname == "player" then
+				print("race total: "..playerraceoverpoints,12,89,wincol)
+				print("match total: "..player.total,12,97,wincol)
+			else
+				print("race total: "..cpuraceoverpoints,12,89,wincol)
+				print("match total: "..cpu.total,12,97,wincol)
+			end
 		else
-			print(losename.." loses.",5,5,losecol)
-			print("kilos: "..losescore,5,13,losecol)
-			print("safeties: "..losesft,5,21,losecol)
-			print("coup fourre: "..losecfs,5,29,losecol)
-			print("all 4 safeties: "..loseall4,5,37,losecol)
+			print("kilos: "..losescore,12,17,losecol)
+			print("safeties: "..losesft,12,25,losecol)
+			print("coup fourre: "..losecfs,12,33,losecol)
+			print("all 4 safeties: "..loseall4,12,41,losecol)
+			if winname == "player" then
+				print("race total: "..cpuraceoverpoints,12,49,losecol)
+				print("match total: "..cpu.total,12,57,losecol)
+			else
+				print("race total: "..playerraceoverpoints,12,49,losecol)
+				print("match total: "..player.total,12,57,losecol)
+			end
 		end
-		print("⬅️: winner ➡️: loser",5,85)
+		print("⬅️: winner ➡️: loser",12,105)
 	else
-		print("nobody won the race",5,5,wincol)
-		print("player kilos: "..player.score,5,13,player.col)
-		print("cpu kilos: "..cpu.score,5,21,cpu.col)
-		print("player safeties: "..#(player.safeties)*100,5,29,player.col)
-		print("cpu safeties: "..#(cpu.safeties)*100,5,37,cpu.col)
-		print("player coup fourre: "..player.cfs*300,5,45,player.col)
-		print("cpu coup fourre: "..cpu.cfs*300,5,53,cpu.col)
-		if #player.safeties == 4 then
-			print("player all safeties: 400",5,61,player.col)
-		else
-			print("player all safeties: 0",5,61,player.col)
-		end
-		if #cpu.safeties == 4 then
-			print("cpu all safeties: 400",5,69,cpu.col)
-		else
-			print("cpu all safeties: 0",5,69,cpu.col)
-		end
+		print("nobody won",12,9,6)
+		print("player: "..playerraceoverpoints.." cpu: "..cpuraceoverpoints,12,17,6)
+		print("player kilos: "..player.score,12,25,player.col)
+		print("cpu kilos: "..cpu.score,12,33,cpu.col)
+		print("player safeties: "..#(player.safeties)*100,12,41,player.col)
+		print("cpu safeties: "..#(cpu.safeties)*100,12,49,cpu.col)
+		print("player coup fourre: "..player.cfs*300,12,57,player.col)
+		print("cpu coup fourre: "..cpu.cfs*300,12,65,cpu.col)
+		print("player all safeties: "..tostr(400 * flr(#player.safeties)),12,73,player.col)
+		print("cpu all safeties: "..tostr(400 * flr(#cpu.safeties)),12,81,cpu.col)
 		if calledext == "cpu" then
-			print("player extension stop: 200",5,77,player.col)
+			print("player extension stop: 200",12,89,player.col)
 		else
-			print("player extension stop: 0",5,77,player.col)
+			print("player extension stop: 0",12,89,player.col)
 		end
 		if calledext == "player" then
-			print("cpu extension stop: 200",5,85,cpu.col)
+			print("cpu extension stop: 200",12,97,cpu.col)
 		else
-			print("cpu extension stop: 0",5,85,cpu.col)
+			print("cpu extension stop: 0",12,97,cpu.col)
 		end
 	end
-	print("=====player race total: "..playerraceoverpoints.."=====",5,95,player.col)
-	print("=====cpu race total: "..cpuraceoverpoints.."=====",5,105,cpu.col)
-	print("press ❎ for next race!",5,118,4)
+--	print("=====player race total: "..playerraceoverpoints.."=====",5,95,player.col)
+--	print("=====cpu race total: "..cpuraceoverpoints.."=====",5,105,cpu.col)
+	print("press ❎ for next race!",12,113,raceovertc)
 end
 
 function draw_start()
@@ -1055,8 +1111,8 @@ function draw_game()
 	rectfill(playerptrbox.x,playerptrbox.y,playerptrbox.xe,playerptrbox.ye,playerptrbox.col)
 	rectfill(cpubox.x,cpubox.y,cpubox.xe,cpubox.ye,cpubox.col)
 	sspr(80,64,16,16,0,98,128,16)
-	spr(23,120,98)
-	spr(23,120,106)
+	spr(24,120,98)
+	spr(24,120,106)
 	sspr(80,80,16,16,player.carx, player.cary)
 	sspr(96,80,16,16,cpu.carx, cpu.cary)
 
@@ -1365,7 +1421,6 @@ function animatecar(_player,_value)
 	if cardestx > 128 then
 		cardestx = 128
 	end
---	debug = "oldx= " .. _player.carx .. "newx= " .. cardestx
 	_player.cardx = carspeed
 end
 
@@ -1389,10 +1444,12 @@ function checkvalidplay(_player,_opponent,_card)
  		-- n = number
  		if _player.num200s >= 2 and _card.value == 200 then
  			-- can play max of two 200s
+ 			debug = "max two 200s per race!"
  			return false
  		end
  		if _card.value + _player.score > curgoal then
  			-- you have to hit the race goal exactly
+ 			debug = "must reach goal exactly!"
  			return false
  		end
  		if hassafety(_player,"emergency") and (_player.upcard == nil or _player.upcard.type != "h") then
@@ -1419,6 +1476,7 @@ function checkvalidplay(_player,_opponent,_card)
 	elseif _card.type == "s" then
 	 	-- s = stop
 	 	if hassafety(_opponent,_card.safety) then
+	 		debug = "opponent is immune!"
 	 		return false
 	 	elseif _opponent.upcard ~= nil and (_opponent.upcard.type=="g" or _opponent.upcard.type=="n") then
 	 		 return true
@@ -1428,6 +1486,7 @@ function checkvalidplay(_player,_opponent,_card)
 	elseif _card.type == "h" then
  		-- h = hazard
  		if hassafety(_opponent,_card.safety) then
+	 		debug = "opponent is immune!"
 	 		return false
 	 	elseif _opponent.upcard ~= nil and (_opponent.upcard.type=="g" or _opponent.upcard.type=="n" or ((_opponent.upcard.type=="f" or _opponent.upcard.type=="r") and hassafety(_opponent,"emergency"))) then
 	 		return true
@@ -1441,11 +1500,16 @@ function checkvalidplay(_player,_opponent,_card)
  		if _player.upcard ~= nil and _player.upcard.type == "h" and _player.upcard.remedy == _card.name then
  			return true
  		else
+ 			debug = "this fix not needed!"
  			return false
  		end
 	elseif _card.type == "l" then
  		-- l = speed limit
- 		if _opponent.limit or hassafety(_opponent,_card.safety) then
+ 		if hassafety(_opponent,_card.safety) then
+	 		debug = "opponent is immune!"
+	 		return false
+	 	elseif _opponent.limit then
+	 		debug = "already speed limited!"
 	 		return false
 	 	else
 	 		return true
@@ -1455,6 +1519,7 @@ function checkvalidplay(_player,_opponent,_card)
  		if not hassafety(_player,"emergency") and _player.limit then
  			return true
  		else
+ 			debug = "not under speed limit!"
  			return false
  		end
 	elseif _card.type == "f" then
@@ -1727,14 +1792,14 @@ __gfx__
 007007006777777667737776677337766773337667733336b77bb77b85855858850000588505502885999958b7b7777b85888558cff0affcc0ff0f0cc0fffffc
 000000006737777667337776673337766733337667333336b777777b88555588855555588555554885555558bb77777b85555558cffffffccffffffcc0fffffc
 000000006666666666666666666666666666666666666666bbbbbbbb88888888888888888888888888888888bbbbbbbb88888888cccccccccccccccccccccccc
-ccccccccbbbbbbbbbbbbbbbbbbbbbbbb111111118888888807070707eeee07070000000000000000000000000000000000000000000000000000000000000000
-cffffffcb777777bb777777bb777777b129292918778777870707070eeee70700000000000000000000000000000000000000000000000000000000000000000
-cffffffcb777707bb776767bb770077b192929218788787807070707eeee07070000000000000000000000000000000000000000000000000000000000000000
-cf8811fcb777077bb776667bb706607b129292918778787870707070eeee70700000000000000000000000000000000000000000000000000000000000000000
-cf8811fcb788877bb777677bb706607b192929218878787807070707eeee07070000000000000000000000000000000000000000000000000000000000000000
-c000000cb788877bb777677bb770077b129292918778777870707070eeee70700000000000000000000000000000000000000000000000000000000000000000
-cffffffcb788877bb777677bb777777b192929218888888807070707eeee07070000000000000000000000000000000000000000000000000000000000000000
-ccccccccbbbbbbbbbbbbbbbbbbbbbbbb111111118888888870707070eeee70700000000000000000000000000000000000000000000000000000000000000000
+ccccccccbbbbbbbbbbbbbbbbbbbbbbbb11111111888888880077007777007700eeee070700000000000000000000000000000000000000000000000000000000
+cffffffcb777777bb777777bb777777b12929291877877780077007777007700eeee707000000000000000000000000000000000000000000000000000000000
+cffffffcb777707bb776767bb770077b19292921878878787700770000770077eeee070700000000000000000000000000000000000000000000000000000000
+cf8811fcb777077bb776667bb706607b12929291877878787700770000770077eeee707000000000000000000000000000000000000000000000000000000000
+cf8811fcb788877bb777677bb706607b19292921887878780077007777007700eeee070700000000000000000000000000000000000000000000000000000000
+c000000cb788877bb777677bb770077b12929291877877780077007777007700eeee707000000000000000000000000000000000000000000000000000000000
+cffffffcb788877bb777677bb777777b19292921888888887700770000770077eeee070700000000000000000000000000000000000000000000000000000000
+ccccccccbbbbbbbbbbbbbbbbbbbbbbbb11111111888888887700770000770077eeee707000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -1783,22 +1848,22 @@ eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000e033333333333333
 0000000000000000000000000000000000000000000000000000000000000000eeeeee000eeeeeeeeeeee000eeeeeeeeeeeeee000eeeeeeeeeeee000eeeeeeee
 0000000000000000000000000000000000000000000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 0000000000000000000000000000000000000000000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000a5aa5aa5aa5aa5aa00000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeeee00eeeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeeee0660eeeeeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
-5555555555555555555555555555555500000000eeeeeeeee06666000eeeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
-aaaa55aaaa55aaaa55aaaa55aaaa55aa00000000eeeeeee00666676660eeeeeeeeeeeeee00000000555555555555555500000000000000000000000000000000
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000005555555555555555eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000005555555555555555eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000005555555555555555eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000005555555555555555ee0eeeeeeeeeeeeeee0eeeeee6565eee
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000005555555555555555ee0107070eeeeeeeee01070705656eee
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000005555555555555555ee01707006565eeeee01707006565eee
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000005555555555555555ee01070705656eeeee01070705656eee
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000a5aa5aa5aa5aa5aaee01707006565eeeee01707006565eee
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000005555555555555555ee01070705656eeeee01070705656eee
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000005555555555555555ee01707006565eeeee01707006565eee
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000005555555555555555ee01070705656eeeee01070705656eee
+5555555555555555555555555555555500000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000005555555555555555ee01707006565eeeee0170700eeeeeee
+5555555555555555555555555555555500000000eeeeeeeeeee00eeeeeeeeeeeeeeeeeee000000005555555555555555ee01eeeee5656eeeee01eeeeeeeeeeee
+5555555555555555555555555555555500000000eeeeeeeeee0660eeeeeeeeeeeeeeeeee000000005555555555555555ee01eeeeeeeeeeeeee01eeeeeeeeeeee
+5555555555555555555555555555555500000000eeeeeeeee06666000eeeeeeeeeeeeeee000000005555555555555555ee01eeeeeeeeeeeeee01eeeeeeeeeeee
+aaaa55aaaa55aaaa55aaaa55aaaa55aa00000000eeeeeee00666676660eeeeeeeeeeeeee000000005555555555555555ee0eeeeeeeeeeeeeee0eeeeeeeeeeeee
 5555555555555555555555555555555500000000eeeeeee067766776760eeeeeeeeeeeee00000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000
 5555555555555555555555555555555500000000eeeeeeee067600676660eeeeeeeeeeee00000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000
 5555555555555555555555555555555500000000eeeeeeeee000ee0666660eeeeeeeeeee00000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000
