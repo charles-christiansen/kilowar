@@ -7,6 +7,7 @@ __lua__
 ---- 1. update card sounds
 ---- 2. more visible coup fourre icon
 ---- 3. music for start screen + match over screen
+---- 4. remove cheat
 ---- 4. ship it!
 
 function _init()
@@ -20,7 +21,7 @@ function _init()
 	stdgoal = 700
 	extgoal = 1000
 	curgoal = 700
-	totalgoal = 1000
+	totalgoal = 5000
 	currentplayer = {name="nobody"}
 	calledext = "nobody"
 	turninprogress = false
@@ -95,7 +96,7 @@ function _init()
 	loseext = 0
 	losecol = 7
 
-	cheat = true
+	cheat = false
 	palt(14,true)
 	palt(0,false)
 	
