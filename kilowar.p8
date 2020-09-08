@@ -4,8 +4,10 @@ __lua__
 --init functions
 
 --TODO:
----- 4. more visible coup fourre icon
----- 5. more card sounds
+---- 1. update card sounds
+---- 2. more visible coup fourre icon
+---- 3. music for start screen + match over screen
+---- 4. ship it!
 
 function _init()
 	deck = shuffledeck()
