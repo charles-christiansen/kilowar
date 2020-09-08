@@ -4,11 +4,6 @@ __lua__
 --init functions
 
 --TODO:
----- 0. update rule screen
---------- match score
---------- button controls
----- 1. update card sounds
----- 2. more visible coup fourre icon
 ---- 3. music for start screen + match over screen
 ---- 4. remove cheat
 ---- 4. ship it!
@@ -139,16 +134,16 @@ function shuffledeck()
 	for i=1,14 do
 		-- add number cards
 		if i <= 10 then
-			add(_d,{type="n",value=25,belowlimit=true,name="25",remedy="",safety="",sprite=1,x=-1,y=-1,fx=1,iscf=false})
-			add(_d,{type="n",value=50,belowlimit=true,name="50",remedy="",safety="",sprite=2,x=-1,y=-1,fx=1,iscf=false})
-			add(_d,{type="n",value=75,belowlimit=false,name="75",remedy="",safety="",sprite=3,x=-1,y=-1,fx=1,iscf=false})
+			add(_d,{type="n",value=25,belowlimit=true,name="25",remedy="",safety="",sprite=1,x=-1,y=-1,fx=11,iscf=false})
+			add(_d,{type="n",value=50,belowlimit=true,name="50",remedy="",safety="",sprite=2,x=-1,y=-1,fx=12,iscf=false})
+			add(_d,{type="n",value=75,belowlimit=false,name="75",remedy="",safety="",sprite=3,x=-1,y=-1,fx=13,iscf=false})
 		end
 		if i <= 12 then
-			add(_d,{type="n",value=100,belowlimit=false,name="100",remedy="",safety="",sprite=4,x=-1,y=-1,fx=1,iscf=false})
+			add(_d,{type="n",value=100,belowlimit=false,name="100",remedy="",safety="",sprite=4,x=-1,y=-1,fx=14,iscf=false})
 		end
 
 		if i <=4 then
-			add(_d,{type="n",value=200,belowlimit=false,name="200",remedy="",safety="",sprite=5,x=-1,y=-1,fx=1,iscf=false})
+			add(_d,{type="n",value=200,belowlimit=false,name="200",remedy="",safety="",sprite=5,x=-1,y=-1,fx=15,iscf=false})
 		end
 		-- add go cards
 		add(_d,{type="g",value=0,belowlimit=false,name="go",remedy="",safety="",sprite=6,x=-1,y=-1,fx=7,iscf=false})
@@ -163,20 +158,20 @@ function shuffledeck()
 			add(_d,{type="h",value=0,belowlimit=false,name="empty",remedy="gascan",safety="tanker",sprite=10,x=-1,y=-1,fx=5,iscf=false})
 		end
 		if i <= 4 then
-			add(_d,{type="l",value=0,belowlimit=false,name="limit 50",remedy="nolimit",safety="emergency",sprite=12,x=-1,y=-1,fx=1,iscf=false})
+			add(_d,{type="l",value=0,belowlimit=false,name="limit 50",remedy="nolimit",safety="emergency",sprite=12,x=-1,y=-1,fx=16,iscf=false})
 		end
 		-- add remedies + remove limits
 		if i <= 6 then
-			add(_d,{type="v",value=0,belowlimit=false,name="nolimit",remedy="",safety="emergency",sprite=11,x=-1,y=-1,fx=1,iscf=false})
+			add(_d,{type="v",value=0,belowlimit=false,name="nolimit",remedy="",safety="emergency",sprite=11,x=-1,y=-1,fx=17,iscf=false})
 			add(_d,{type="r",value=0,belowlimit=false,name="gascan",remedy="",safety="",sprite=17,x=-1,y=-1,fx=1,iscf=false})
 			add(_d,{type="r",value=0,belowlimit=false,name="repair",remedy="",safety="",sprite=18,x=-1,y=-1,fx=1,iscf=false})
 			add(_d,{type="r",value=0,belowlimit=false,name="spare",remedy="",safety="",sprite=19,x=-1,y=-1,fx=1,iscf=false})
 		end
 		-- add safeties
 		if i == 1 then
-			add(_d,{type="f",value=0,belowlimit=false,name="ppt",remedy="",safety="",sprite=13,x=-1,y=-1,fx=1,iscf=false})
-			add(_d,{type="f",value=0,belowlimit=false,name="tanker",remedy="",safety="",sprite=14,x=-1,y=-1,fx=1,iscf=false})
-			add(_d,{type="f",value=0,belowlimit=false,name="ace",remedy="",safety="",sprite=15,x=-1,y=-1,fx=1,iscf=false})
+			add(_d,{type="f",value=0,belowlimit=false,name="ppt",remedy="",safety="",sprite=13,x=-1,y=-1,fx=18,iscf=false})
+			add(_d,{type="f",value=0,belowlimit=false,name="tanker",remedy="",safety="",sprite=14,x=-1,y=-1,fx=18,iscf=false})
+			add(_d,{type="f",value=0,belowlimit=false,name="ace",remedy="",safety="",sprite=15,x=-1,y=-1,fx=18,iscf=false})
 			add(_d,{type="f",value=0,belowlimit=false,name="emergency",remedy="",safety="",sprite=16,x=-1,y=-1,fx=8,iscf=false})
 		end
 	end
@@ -902,7 +897,7 @@ end
 
 function draw_rules()
 	cls()
-	print("race to 700km, extend to 1000km",2,1,10)
+	print("race:700/1000 extend. match:5000",1,1,10)
 	-- nums
 	spr(1,12,8)
 	spr(2,28,8)
@@ -918,51 +913,53 @@ function draw_rules()
 	print("200",71,18,7)
 	print("go",88,18,7)	
 	print("stop",100,18,7)
-	print("**max two 200s per race**",13,28,10)
+	print("**max two 200s per race**",13,26,10)
 	-- remedies
-	spr(17,1,41)
-	print("fix",12,41,7)
-	spr(10,26,41)
-	spr(18,46,41)
-	print("fix",57,41,7)
-	spr(9,71,41)
-	spr(19,91,41)
-	print("fix",102,41,7)
-	spr(8,116,41)
+	spr(17,1,36)
+	print("fix",12,36,7)
+	spr(10,26,36)
+	spr(18,46,36)
+	print("fix",57,36,7)
+	spr(9,71,36)
+	spr(19,91,36)
+	print("fix",102,36,7)
+	spr(8,116,36)
 	--safeties
-	spr(14,0,51)
-	print("prev",11,51,7)
-	spr(10,28,51)
-	spr(15,45,51)
-	print("prev",56,51,7)
-	spr(9,73,51)
-	spr(13,90,51)
-	print("prev",101,51,7)
-	spr(8,118,51)
+	spr(14,0,44)
+	print("prev",11,44,7)
+	spr(10,28,44)
+	spr(15,45,44)
+	print("prev",56,44,7)
+	spr(9,73,44)
+	spr(13,90,44)
+	print("prev",101,44,7)
+	spr(8,118,44)
 	-- coup fourre
-	print("use when attacked = coup fourre!",0,63,10)
+	print("⬆️ when attacked = coup fourre!",0,54,10)
 	pal(12,7)
 	pal(15,9)
-	spr(14,36,71)	
-	spr(15,56,71)	
-	spr(13,76,71)	
+	spr(14,36,62)	
+	spr(15,56,62)	
+	spr(13,76,62)	
 	pal()
 	-- limits
-	spr(12,21,85)
-	print("sets",32,85,7)
-	spr(21,49,85)
-	spr(11,64,85)
-	print("clears",75,85,7)
-	spr(21,100,85)
+	spr(12,21,75)
+	print("sets",32,75,7)
+	spr(21,49,75)
+	spr(11,64,75)
+	print("clears",75,75,7)
+	spr(21,100,75)
 	-- emergency
-	spr(16,47,98)
+	spr(16,47,88)
 	pal(12,7)
 	pal(15,9)
-	spr(16,67,98)
+	spr(16,67,88)
 	pal()
 	palt(14,true)
 	palt(0,false)
-	print("fixes/prevs stop + speed limit",3,108,10)
+	print("fixes/prevs stop + speed limit",3,98,10)
+	print("❎=play card",3,106,player.col)
+	print("🅾️=discard",83,106,cpu.col)
 	print("🅾️: return to start screen",10,122,7)
 end
 
@@ -1107,7 +1104,7 @@ function draw_game()
 	cls()
 	print("player: "..player.score.." (match total: "..player.total..")",5,5,player.col)
 	if cancf and currentplayer.name == "cpu" and cfon then
-		print("⬆️",110,player.cardy,cfblinktimercols[cfblinktimer])
+		print("⬆️ cf ⬆️",40,decky,cfblinktimercols[cfblinktimer])
 	end
 	cfblinktimer += 1
 	if cfblinktimer % 12 == 0 then
@@ -1900,3 +1897,11 @@ __sfx__
 001800002422024220182201822024220242201822018220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000200000b7500a7500a7500975007750067500675003750047500475004750037500375003750037500375003750027500275001750007500175000750007500075000750007500070000700007000070000700
 000800001255012500145500050016550005001955000500165000050016550005001955019550195501955019550195501955000500005000050000500005000050000500005000050000500005000050000500
+001000000015000150000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000000015000150011500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000000015000150011500115000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000000015000150011500115002150000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000000015000150011500115002150031500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000600000642006420054200542005420054200442003420024200142000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400
+000600000142002420034200442005420054200542005420064200642000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400
+000800002e7203172034720317202e7202a7202f72032720347200070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700
