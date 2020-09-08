@@ -4,6 +4,9 @@ __lua__
 --init functions
 
 --TODO:
+---- 0. update rule screen
+--------- match score
+--------- button controls
 ---- 1. update card sounds
 ---- 2. more visible coup fourre icon
 ---- 3. music for start screen + match over screen
@@ -368,6 +371,8 @@ function update_game()
 					if cond1 or cond2 then
 						curgoal = extgoal
 						debug = "cpu extends to 1000!"
+						player.carx = player.score * 0.112
+						cpu.carx = cpu.score * 0.112
 						calledext = "cpu"
 						racewinner = ""
 					else
@@ -1043,8 +1048,8 @@ function draw_raceover()
 		print("cpu safeties: "..#(cpu.safeties)*100,12,49,cpu.col)
 		print("player coup fourre: "..player.cfs*300,12,57,player.col)
 		print("cpu coup fourre: "..cpu.cfs*300,12,65,cpu.col)
-		print("player all safeties: "..tostr(400 * flr(#player.safeties)),12,73,player.col)
-		print("cpu all safeties: "..tostr(400 * flr(#cpu.safeties)),12,81,cpu.col)
+		print("player all safeties: "..tostr(400 * flr(#player.safeties / 4)),12,73,player.col)
+		print("cpu all safeties: "..tostr(400 * flr(#cpu.safeties / 4)),12,81,cpu.col)
 		if calledext == "cpu" then
 			print("player extension stop: 200",12,89,player.col)
 		else
