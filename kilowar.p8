@@ -4,7 +4,7 @@ __lua__
 --init functions
 
 --TODO:
----- 3. music for start screen + match over screen
+---- 3. music for start screen
 ---- 4. remove cheat
 ---- 4. ship it!
 
@@ -19,7 +19,7 @@ function _init()
 	stdgoal = 700
 	extgoal = 1000
 	curgoal = 700
-	totalgoal = 2000
+	totalgoal = 5000
 	currentplayer = {name="nobody"}
 	calledext = "nobody"
 	turninprogress = false
@@ -209,6 +209,11 @@ function update_rules()
 end
 
 function update_start()
+	raceovertc = cfblinktimercols[raceoverblinktimer]
+	raceoverblinktimer += 1
+	if raceoverblinktimer % 12 == 0 then
+		raceoverblinktimer = 1
+	end
 	if btnp(2) then
 		difficulty -= 1
 		if difficulty < 1 then
@@ -1084,6 +1089,9 @@ function draw_start()
 		ccx = flr(rnd(10)) - 64
 	end
 	spr(64,36,10,7,3)
+	print("by",60,27,7)
+	print("2bit",36,35,3)
+	print("chuck",72,35,4)
 	sspr(128,64,32,32,0,50,128,32)
 	spr(72,pcx,30,4,4)
 	spr(76,ccx,50,4,4)
@@ -1093,12 +1101,12 @@ function draw_start()
 	ccx += cdx
 	pdx += rnd(0.11)
 	cdx += rnd(0.11)
-	if pcx > 75 and pcx < 80 then
-		sfx(9)
-	end
-	if ccx > 75 and ccx < 80 then
-		sfx(9)
-	end
+--	if pcx > 75 and pcx < 80 then
+--		sfx(9)
+--	end
+--	if ccx > 75 and ccx < 80 then
+--		sfx(9)
+--	end
 	if pcx >= 150 then
 		pcx = -200
 		pdx = 0.1
@@ -1108,8 +1116,8 @@ function draw_start()
 		cdx = 0.1
 	end
 	print("cpu difficulty: "..diffchoices[difficulty].." ⬆️ ⬇️ ",10,85,7)
-	print("press ❎ to start",32,105,4)
-	print("press 🅾️ for rules",32,115,4)
+	print("press ❎ to start",32,105,raceovertc)
+	print("press 🅾️ for rules",32,115,7)
 end
 
 function draw_game()
