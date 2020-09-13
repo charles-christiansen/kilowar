@@ -19,7 +19,7 @@ function _init()
 	stdgoal = 700
 	extgoal = 1000
 	curgoal = 700
-	totalgoal = 1000
+	totalgoal = 2000
 	currentplayer = {name="nobody"}
 	calledext = "nobody"
 	turninprogress = false
@@ -296,9 +296,18 @@ function update_game()
 	end
 	if matchover then
 		mode = "matchover"
-		music(0)
+		if matchwinner == "cpu" then
+			sfx(25)
+		else
+			music(0)
+		end
 	elseif raceover then
 		mode = "raceover"
+		if racewinner == "cpu" then
+			sfx(25)
+		elseif racewinner == "player" then
+			music(5)
+		end
 	elseif #racewinner > 0 then
 		if curgoal == stdgoal then
 			if racewinner == "player" then
@@ -1467,41 +1476,45 @@ function checkvalidplay(_player,_opponent,_card)
  			if _player.upcard.type == "g" or _player.upcard.type == "n" then
  				if not _player.limit or (_player.limit and _card.value <= 50) then
  					return true
+ 				else
+ 					debug = "can't exceed speed limit!"
  				end
  			elseif hassafety(_player,"emergency") and (_player.upcard.type == "r" or _player.upcard.type == "f") then
  				return true
+ 			elseif _player.upcard.type == "h" or _player.upcard.type == "s" or ((_player.upcard.type == "r" or _player.upcard.type == "f") and not hassafety(_player,"emergency")) then
+ 				debug = "you're still stopped!"
  			end
- 		else 
- 			return false
+ 		else
+ 			debug = "you need a green light!"
  		end
 	elseif _card.type == "g" then
  		-- g = go
  		if not hassafety(_player, "emergency") and (_player.upcard == nil or _player.upcard.type == "s" or _player.upcard.type == "r" or _player.upcard.type == "f") then
  			return true
- 		else
- 			return false
+ 		elseif _player.upcard.type == "h" then
+ 			debug = "fix your hazard first!"
+ 		elseif hassafety(_player,"emergency") or (_player.upcard != nil and (_player.upcard.type == "g" or _player.upcard.type == "n")) then
+ 			debug = "you're not stopped!"
  		end
 	elseif _card.type == "s" then
 	 	-- s = stop
 	 	if hassafety(_opponent,_card.safety) then
 	 		debug = "opponent is immune!"
-	 		return false
 	 	elseif _opponent.upcard ~= nil and (_opponent.upcard.type=="g" or _opponent.upcard.type=="n") then
 	 		 return true
 	 	else 
-	 		return false
+	 		debug = "opponent is already stopped!"
 	 	end
 	elseif _card.type == "h" then
  		-- h = hazard
  		if hassafety(_opponent,_card.safety) then
 	 		debug = "opponent is immune!"
-	 		return false
 	 	elseif _opponent.upcard ~= nil and (_opponent.upcard.type=="g" or _opponent.upcard.type=="n" or ((_opponent.upcard.type=="f" or _opponent.upcard.type=="r") and hassafety(_opponent,"emergency"))) then
 	 		return true
 	 	elseif _opponent.upcard == nil and hassafety(_opponent,"emergency") then
 	 		return true
 	 	else
-	 		return false
+	 		debug = "opponent is already stopped!"
 	 	end
 	elseif _card.type == "r" then
  		-- r = remedy
@@ -1509,16 +1522,13 @@ function checkvalidplay(_player,_opponent,_card)
  			return true
  		else
  			debug = "this fix not needed!"
- 			return false
  		end
 	elseif _card.type == "l" then
  		-- l = speed limit
  		if hassafety(_opponent,_card.safety) then
 	 		debug = "opponent is immune!"
-	 		return false
 	 	elseif _opponent.limit then
 	 		debug = "already speed limited!"
-	 		return false
 	 	else
 	 		return true
 	 	end
@@ -1528,7 +1538,6 @@ function checkvalidplay(_player,_opponent,_card)
  			return true
  		else
  			debug = "not under speed limit!"
- 			return false
  		end
 	elseif _card.type == "f" then
  		-- f = safety
@@ -1912,10 +1921,14 @@ __sfx__
 0112000000633006002c6000060000600006002c6000060000633006032c6000060000600006032c6000060000633006032c6000060000600006032c6000060000633006032c6000060000600006032c60000600
 01120000207401c7401e7402074020740217402374020740207401c7401e7402074020740217402374020740207401c7401e7402074020740217402374020740207401c7401e7401e7401c7411c7411c7411c700
 01120000237401f740217402374023740247402674023740237401f740217402374023740247402674023740237401f740217402374023740247402674023740237401f74021740217401f7411f7411f7411f700
+011400000000029752297522975229752297520070228752287520070229752297520070228752287520070224752247522475200702217520070226752267522677221772217722177221772000000000000000
+011400000010000100001000010000100001000010000100001000010000100001000010000100001000010022100221002410024100161000010018100181002211222112221222212224132241322414224142
+011800001825218252000000020017252172520000000200162521625200000002001525115251152511525115251152511525115255002000020000200002000020000000000000000000000000000000000000
 __music__
 00 40411543
 01 13141543
 00 13141543
 00 13141643
 02 13141643
+04 17184344
 
