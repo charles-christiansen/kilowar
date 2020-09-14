@@ -3,12 +3,11 @@ version 29
 __lua__
 --init functions
 
---TODO:
----- 3. music for start screen
----- 4. remove cheat
----- 4. ship it!
-
 function _init()
+	pirate = false
+	if stat(102) != "www.lexaloffle.com" and stat(102) != 0 then
+		pirate = true
+	end
 	deck = shuffledeck()
 	playerbox = {x=0,y=86,xe=128,ye=96,col=3}
 	cpubox = {x=0,y=115,xe=128,ye=125,col=4}
@@ -67,8 +66,7 @@ function _init()
 	borderspr = 22
 	flagx = 96
 
-	-- debugging
-	debug = ""
+	msgtxt = ""
 	
 	winname = ""
 	winscore = 0
@@ -94,7 +92,6 @@ function _init()
 	loseext = 0
 	losecol = 7
 
-	cheat = false
 	palt(14,true)
 	palt(0,false)
 	
@@ -118,6 +115,8 @@ function _init()
 	cfblinktimer=1
 	cfblinktimercols={7,7,7,7,10,10,10,10,11,11,11,11}
 	cfon=true
+
+	music(6)
 end
 
 function shuffledeck()
@@ -203,7 +202,7 @@ function _update60()
 end
 
 function update_rules()
-	if btnp(4) then
+	if btnp(4) and not pirate then
 		mode = "start"
 	end
 end
@@ -226,10 +225,11 @@ function update_start()
 			difficulty = 1
 		end
 	end
-	if btnp(4) then
+	if btnp(4) and not pirate then
 		mode = "rules"
 	end
-	if btnp(5) then
+	if btnp(5) and not pirate then
+		music(-1,500)
 		mode = "game"
 	end
 end
@@ -260,6 +260,7 @@ function update_raceover()
 	end
 	if btnp(5) then
 		newrace()
+		music(-1,500)
 		mode = "game"
 	end
 end
@@ -291,6 +292,7 @@ function update_matchover()
 		newmatch()
 		music(-1,500)
 		mode = "start"
+		music(6)
 	end
 end
 
@@ -316,12 +318,12 @@ function update_game()
 	elseif #racewinner > 0 then
 		if curgoal == stdgoal then
 			if racewinner == "player" then
-				debug = "⬆️ = extend ⬇️ = end"
+				msgtxt = "⬆️ = extend ⬇️ = end"
 				if btnp(2) then
 					curgoal = extgoal
 					player.carx = player.score * 0.112
 					cpu.carx = cpu.score * 0.112
-					debug = "player extends to 1000!"
+					msgtxt = "player extends to 1000!"
 					calledext = "player"
 					racewinner = ""
 				end
@@ -358,7 +360,7 @@ function update_game()
 						curgoal = extgoal
 						player.carx = player.score * 0.112
 						cpu.carx = cpu.score * 0.112
-						debug = "cpu extends to 1000!"
+						msgtxt = "cpu extends to 1000!"
 						calledext = "cpu"
 						racewinner = ""
 					else
@@ -382,7 +384,7 @@ function update_game()
 					cond2 = player.upcard != nil and ((player.upcard.type == "s" and hassafety(cpu,"emergency")) or (player.upcard.type == "h" and hassafety(cpu,player.upcard.safety)))
 					if cond1 or cond2 then
 						curgoal = extgoal
-						debug = "cpu extends to 1000!"
+						msgtxt = "cpu extends to 1000!"
 						player.carx = player.score * 0.112
 						cpu.carx = cpu.score * 0.112
 						calledext = "cpu"
@@ -429,13 +431,8 @@ function update_game()
 	else
 		-- deal the players a hand
 		if not dealt then
-			if cheat then
-				cheatdealto(player)
-			end
 			for i=1,6 do
-				if not cheat then
-					dealto(player,i)
-				end
+				dealto(player,i)
 				dealto(cpu,i)
 			end
 			dealt = true
@@ -526,7 +523,6 @@ function update_game()
 					drawupinprogress = false
 				end
 			else
---				drawncard = nil
 				playedcard = nil
 				discardedcard = nil
 				playedcardtarget = nil
@@ -616,7 +612,7 @@ function update_game()
 					end
 					player.hand[playercardptr].x -= 1
 					player.hand[playercardptr].y -= 2
-					debug=""
+					msgtxt=""
 					sfx(0)
 				elseif btnp(0) then
 					player.hand[playercardptr].x += 1
@@ -627,11 +623,11 @@ function update_game()
 					end
 					player.hand[playercardptr].x -= 1
 					player.hand[playercardptr].y -= 2
-					debug=""
+					msgtxt=""
 					sfx(0)
 				elseif btnp(5) then
 					if checkvalidplay(player,cpu,player.hand[playercardptr]) then
-						debug=""
+						msgtxt=""
 						playedcard = player.hand[playercardptr]
 						player.prevupcard = player.upcard
 						cpu.prevupcard = cpu.upcard
@@ -643,13 +639,13 @@ function update_game()
 						sfx(playedcard.fx)
 						playinprogress = true
 					else
-						if debug == "" then
-							debug = "invalid play: " .. player.hand[playercardptr].name
+						if msgtxt == "" then
+							msgtxt = "invalid play: " .. player.hand[playercardptr].name
 						end
 					end
 				elseif btnp(4) then
 					if player.hand[playercardptr].type == "f" then
-						debug = "don't discard that!"
+						msgtxt = "don't discard that!"
 					else
 						discard(player,player.hand[playercardptr])
 						if playercardptr > #(player.hand) then
@@ -661,7 +657,7 @@ function update_game()
 				end
 			else
 				if difficulty == 1 then
-					---- 1 = easy (plays to go/recover when possible)
+					-- 1 = easy (plays to go/recover when possible)
 					for i=1,#(cpu.hand) do
 						if checkvalidplay(cpu,player,cpu.hand[i]) then
 							if cpu.hand[i].type == "f" and ((player.score < 600 and curgoal == stdgoal) or (player.score < 900 and curgoal == extgoal) or #deck == 0) then
@@ -679,7 +675,7 @@ function update_game()
 								hurtplay = 0
 								helpplay = 0
 								playinprogress = true
-								debug=""
+								msgtxt=""
 								return
 							end
 						end
@@ -698,7 +694,7 @@ function update_game()
 							hurtplay = 0
 							helpplay = 0
 							playinprogress = true
-							debug=""
+							msgtxt=""
 							return
 						end
 					end
@@ -729,9 +725,9 @@ function update_game()
 							discardinprogress = true
 						end
 					end
-					debug=""
+					msgtxt=""
 				elseif difficulty == 2 then
-					---- 2 = normal (plays first playable card)
+					-- 2 = normal (plays first playable card)
 					for i=1,#(cpu.hand) do
 						if checkvalidplay(cpu,player,cpu.hand[i]) then
 							if cpu.hand[i].type == "f" and ((player.score < 600 and curgoal == stdgoal) or (player.score < 900 and curgoal == extgoal) or #deck == 0) then
@@ -745,7 +741,7 @@ function update_game()
 								sfx(playedcard.fx)
 								safetyplay = 0
 								playinprogress = true
-								debug=""
+								msgtxt=""
 								return
 							end
 						end
@@ -777,9 +773,9 @@ function update_game()
 							discardinprogress = true
 						end
 					end
-					debug=""
+					msgtxt=""
 				else
-					---- 3 = hard (plays to stop player when possible)
+					-- 3 = hard (plays to stop player when possible)
 					for i=1,#(cpu.hand) do
 						if checkvalidplay(cpu,player,cpu.hand[i]) then
 							if cpu.hand[i].type == "f" and ((player.score < 600 and curgoal == stdgoal) or (player.score < 900 and curgoal == extgoal) or #deck == 0) then
@@ -799,7 +795,7 @@ function update_game()
 								hurtplay = 0
 								helpplay = 0
 								playinprogress = true
-								debug=""
+								msgtxt=""
 								return
 							end
 						end
@@ -816,7 +812,7 @@ function update_game()
 						hurtplay = 0
 						helpplay = 0
 						playinprogress = true
-						debug=""
+						msgtxt=""
 						return
 					end
 					
@@ -855,7 +851,7 @@ function update_game()
 							discardinprogress = true
 						end
 					end
-					debug=""
+					msgtxt=""
 				end
 			end
 		end
@@ -1075,8 +1071,6 @@ function draw_raceover()
 			print("cpu extension stop: 0",12,97,cpu.col)
 		end
 	end
---	print("=====player race total: "..playerraceoverpoints.."=====",5,95,player.col)
---	print("=====cpu race total: "..cpuraceoverpoints.."=====",5,105,cpu.col)
 	print("press ❎ for next race!",12,113,raceovertc)
 end
 
@@ -1101,12 +1095,6 @@ function draw_start()
 	ccx += cdx
 	pdx += rnd(0.11)
 	cdx += rnd(0.11)
---	if pcx > 75 and pcx < 80 then
---		sfx(9)
---	end
---	if ccx > 75 and ccx < 80 then
---		sfx(9)
---	end
 	if pcx >= 150 then
 		pcx = -200
 		pdx = 0.1
@@ -1154,8 +1142,8 @@ function draw_game()
 		vlu = 0
 	end
 
-	if debug != "" then
-		print(debug,5,playerbox.y+2,10)
+	if msgtxt != "" then
+		print(msgtxt,5,playerbox.y+2,10)
 	else
 		if player.prevupcard != nil and playedcard != nil and playedcardtarget != nil then
 			spr(player.prevupcard.sprite,playerbox.x+5,playerbox.y+2)
@@ -1308,7 +1296,7 @@ function newrace()
 	hurtplay = 0
 	helpplay = 0
 	deck=shuffledeck()
-	debug=""
+	msgtxt=""
 	racewinner=""
 	raceover=false
 	romode=""
@@ -1375,29 +1363,6 @@ function dealto(_player,_cardnum)
 	card.y = _player.cardy
 	add(_player.hand,card)
 	del(deck,deck[1])
-end
-
-function cheatdealto(_player)
-	-- search the deck for safeties!
-	cn = 1
-	for i=#deck,1,-1 do
-		card = deck[i]
-		if _player.name == "player" and #(_player.safeties) < 4 and card.type == "f" then
-			card.x = cn * 10 + 4
-			cn += 1
-			card.y = _player.cardy
-			add(_player.hand,card)
-			del(deck,deck[i])
-		end		
-	end
-	for i=1,2 do
-		card = deck[1]
-		card.x = cn * 10 + 4
-		cn += 1
-		card.y = _player.cardy
-		add(_player.hand,card)
-		del(deck,deck[1])
-	end
 end
 
 function recalculatehandpos(_curplayer)
@@ -1469,12 +1434,12 @@ function checkvalidplay(_player,_opponent,_card)
  		-- n = number
  		if _player.num200s >= 2 and _card.value == 200 then
  			-- can play max of two 200s
- 			debug = "max two 200s per race!"
+ 			msgtxt = "max two 200s per race!"
  			return false
  		end
  		if _card.value + _player.score > curgoal then
  			-- you have to hit the race goal exactly
- 			debug = "must reach goal exactly!"
+ 			msgtxt = "must reach goal exactly!"
  			return false
  		end
  		if hassafety(_player,"emergency") and (_player.upcard == nil or _player.upcard.type != "h") then
@@ -1485,58 +1450,58 @@ function checkvalidplay(_player,_opponent,_card)
  				if not _player.limit or (_player.limit and _card.value <= 50) then
  					return true
  				else
- 					debug = "can't exceed speed limit!"
+ 					msgtxt = "can't exceed speed limit!"
  				end
  			elseif hassafety(_player,"emergency") and (_player.upcard.type == "r" or _player.upcard.type == "f") then
  				return true
  			elseif _player.upcard.type == "h" or _player.upcard.type == "s" or ((_player.upcard.type == "r" or _player.upcard.type == "f") and not hassafety(_player,"emergency")) then
- 				debug = "you're still stopped!"
+ 				msgtxt = "you're still stopped!"
  			end
  		else
- 			debug = "you need a green light!"
+ 			msgtxt = "you need a green light!"
  		end
 	elseif _card.type == "g" then
  		-- g = go
  		if not hassafety(_player, "emergency") and (_player.upcard == nil or _player.upcard.type == "s" or _player.upcard.type == "r" or _player.upcard.type == "f") then
  			return true
  		elseif _player.upcard.type == "h" then
- 			debug = "fix your hazard first!"
+ 			msgtxt = "fix your hazard first!"
  		elseif hassafety(_player,"emergency") or (_player.upcard != nil and (_player.upcard.type == "g" or _player.upcard.type == "n")) then
- 			debug = "you're not stopped!"
+ 			msgtxt = "you're not stopped!"
  		end
 	elseif _card.type == "s" then
 	 	-- s = stop
 	 	if hassafety(_opponent,_card.safety) then
-	 		debug = "opponent is immune!"
+	 		msgtxt = "opponent is immune!"
 	 	elseif _opponent.upcard ~= nil and (_opponent.upcard.type=="g" or _opponent.upcard.type=="n") then
 	 		 return true
 	 	else 
-	 		debug = "opponent is already stopped!"
+	 		msgtxt = "opponent is already stopped!"
 	 	end
 	elseif _card.type == "h" then
  		-- h = hazard
  		if hassafety(_opponent,_card.safety) then
-	 		debug = "opponent is immune!"
+	 		msgtxt = "opponent is immune!"
 	 	elseif _opponent.upcard ~= nil and (_opponent.upcard.type=="g" or _opponent.upcard.type=="n" or ((_opponent.upcard.type=="f" or _opponent.upcard.type=="r") and hassafety(_opponent,"emergency"))) then
 	 		return true
 	 	elseif _opponent.upcard == nil and hassafety(_opponent,"emergency") then
 	 		return true
 	 	else
-	 		debug = "opponent is already stopped!"
+	 		msgtxt = "opponent is already stopped!"
 	 	end
 	elseif _card.type == "r" then
  		-- r = remedy
  		if _player.upcard ~= nil and _player.upcard.type == "h" and _player.upcard.remedy == _card.name then
  			return true
  		else
- 			debug = "this fix not needed!"
+ 			msgtxt = "this fix not needed!"
  		end
 	elseif _card.type == "l" then
  		-- l = speed limit
  		if hassafety(_opponent,_card.safety) then
-	 		debug = "opponent is immune!"
+	 		msgtxt = "opponent is immune!"
 	 	elseif _opponent.limit then
-	 		debug = "already speed limited!"
+	 		msgtxt = "already speed limited!"
 	 	else
 	 		return true
 	 	end
@@ -1545,7 +1510,7 @@ function checkvalidplay(_player,_opponent,_card)
  		if not hassafety(_player,"emergency") and _player.limit then
  			return true
  		else
- 			debug = "not under speed limit!"
+ 			msgtxt = "not under speed limit!"
  		end
 	elseif _card.type == "f" then
  		-- f = safety
@@ -1930,8 +1895,14 @@ __sfx__
 01120000207401c7401e7402074020740217402374020740207401c7401e7402074020740217402374020740207401c7401e7402074020740217402374020740207401c7401e7401e7401c7411c7411c7411c700
 01120000237401f740217402374023740247402674023740237401f740217402374023740247402674023740237401f740217402374023740247402674023740237401f74021740217401f7411f7411f7411f700
 011400000000029752297522975229752297520070228752287520070229752297520070228752287520070224752247522475200702217520070226752267522677221772217722177221772000000000000000
-011400000010000100001000010000100001000010000100001000010000100001000010000100001000010022100221002410024100161000010018100181002211222112221222212224132241322414224142
+011400000010000100001000010000100001000010000100001000010000100001000010000100001000010022100221002410024100161000010018100181002211222112221222212224122241222413224132
 011800001825218252000000020017252172520000000200162521625200000002001525115251152511525115251152511525115255002000020000200002000020000000000000000000000000000000000000
+011000000c6530060000600006000c6530060000600006000c6530060000600006000c6530060000600006000c6530060000600006000c6530060000600006000c6530060000600006000c653006000060000600
+011000000c4530c45300003000030c4530c45300003000030c4530c45300003000030c4530c45300003000030c4530c45300003000030c4530c45300003000030c4530c45300003000030c4530c4530000300003
+01100000201522015220152000001815218152000021a1521a152000021b1521b1521b1520000218152181521715200000171522015120151201511f1511f1511f1511f1511f1511f15100000000000000000000
+0110000000000201522015220152000001815218152000021a1521a152000021b1521b1521b1520000218152181521715200000171522015120151201511f1511f1511f1511f1511f1511f151000000000000000
+01100000205522055220552005001855218552005021a5521a552005021b5521b5521b5520050218552185521755200500175522055120551205511f5511f5511f5511f5511f5511f55100500005000050000500
+0110000000500205522055220552005001855218552005021a5521a552005021b5521b5521b5520050218552185521755200500175522055120551205511f5511f5511f5511f5511f5511f551005000050000500
 __music__
 00 40411543
 01 13141543
@@ -1939,4 +1910,9 @@ __music__
 00 13141643
 02 13141643
 04 17184344
+00 1a424344
+01 1a1b4344
+00 1a1b1c1d
+00 1a1b4344
+02 1a1b1e1f
 
