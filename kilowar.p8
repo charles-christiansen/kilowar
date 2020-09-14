@@ -1,6 +1,9 @@
 pico-8 cartridge // http://www.pico-8.com
 version 29
 __lua__
+--kilowar
+--by 2bitchuck
+
 --init functions
 
 function _init()
