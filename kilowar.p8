@@ -1467,7 +1467,7 @@ function checkvalidplay(_player,_opponent,_card)
  		-- g = go
  		if not hassafety(_player, "emergency") and (_player.upcard == nil or _player.upcard.type == "s" or _player.upcard.type == "r" or _player.upcard.type == "f") then
  			return true
- 		elseif _player.upcard.type == "h" then
+ 		elseif _player.upcard != nil and _player.upcard.type == "h" then
  			msgtxt = "fix your hazard first!"
  		elseif hassafety(_player,"emergency") or (_player.upcard != nil and (_player.upcard.type == "g" or _player.upcard.type == "n")) then
  			msgtxt = "you're not stopped!"
@@ -1476,7 +1476,7 @@ function checkvalidplay(_player,_opponent,_card)
 	 	-- s = stop
 	 	if hassafety(_opponent,_card.safety) then
 	 		msgtxt = "opponent is immune!"
-	 	elseif _opponent.upcard ~= nil and (_opponent.upcard.type=="g" or _opponent.upcard.type=="n") then
+	 	elseif _opponent.upcard != nil and (_opponent.upcard.type=="g" or _opponent.upcard.type=="n") then
 	 		 return true
 	 	else 
 	 		msgtxt = "opponent is already stopped!"
