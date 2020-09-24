@@ -473,14 +473,14 @@ function update_game()
 			playinprogress = false
 			cancf = false
 			if not multidraw then
-				if currentplayer.name==player.name then
+				if currentplayer.name==player.name or #player.hand==0 then
 					currentplayer = cpu
 				else
 					currentplayer = player
 				end
 			end
 			draw_up(currentplayer)
-			if currentplayer.name==player.name and player.hand[playercardptr].y == player.cardy then
+			if currentplayer.name==player.name and player.hand[playercardptr] != nil and player.hand[playercardptr].y == player.cardy then
 				player.hand[playercardptr].x -= 1
 				player.hand[playercardptr].y -= 2
 			end
@@ -1132,7 +1132,7 @@ function draw_game()
 	sspr(80,80,16,16,player.carx, player.cary)
 	sspr(96,80,16,16,cpu.carx, cpu.cary)
 
-	if currentplayer.name == player.name then
+	if currentplayer.name == player.name and #player.hand > 0 then
 		print("❎",14+(10*(playercardptr-1)),30,player.col)
 	else
 		print("❎",14+(10*(playercardptr-1)),30,0)
