@@ -473,7 +473,7 @@ function update_game()
 			playinprogress = false
 			cancf = false
 			if not multidraw then
-				if currentplayer.name==player.name or #player.hand==0 then
+				if (currentplayer.name==player.name or #player.hand==0) and #cpu.hand > 0 then
 					currentplayer = cpu
 				else
 					currentplayer = player
@@ -1334,19 +1334,21 @@ function newrace()
 end
 
 function draw_up(_curplayer)
-	card = deck[1]
-	if card != nil then
-		card.x = (#_curplayer.hand + 1) * 10 + 4
-		card.y = _curplayer.cardy
-		drawncard = clonecard(card)
-		drawncard.x = deckx
-		drawncard.y = decky
-		cardtargetx = card.x
-		cardtargety = card.y
-		drawncard.dx = cardplayspeed * (cardtargetx - drawncard.x)
-		drawncard.dy = cardplayspeed * (cardtargety - drawncard.y)
-		add(_curplayer.hand,card)
-		del(deck,card)
+	if #_curplayer.hand < 7 then
+		card = deck[1]
+		if card != nil then
+			card.x = (#_curplayer.hand + 1) * 10 + 4
+			card.y = _curplayer.cardy
+			drawncard = clonecard(card)
+			drawncard.x = deckx
+			drawncard.y = decky
+			cardtargetx = card.x
+			cardtargety = card.y
+			drawncard.dx = cardplayspeed * (cardtargetx - drawncard.x)
+			drawncard.dy = cardplayspeed * (cardtargety - drawncard.y)
+			add(_curplayer.hand,card)
+			del(deck,card)
+		end
 	end
 end
 
@@ -1584,6 +1586,40 @@ function playcoupfourre(_player,_opponent)
 		if card.name == "emergency" then
 			_player.limit = false
 		end
+	elseif _player.upcard != nil and (_player.upcard.type == "s" or _player.upcard.type == "h") then
+		card = nil
+		for i=1,#_player.hand do
+			if _player.hand[i].name == _player.upcard.safety then
+				card = _player.hand[i]
+			end
+		end
+		_player.upcard = _player.prevupcard
+		_player.prevupcard = nil
+		card.iscf = true
+		add(_player.safeties,clonecard(card))
+		del(_player.hand,card)
+		recalculatehandpos(_player)
+		_player.cfs += 1
+		if card.name == "emergency" then
+			_player.limit = false
+		end
+	elseif _player.limit then
+		card = nil
+		for i=1,#_player.hand do
+			if _player.hand[i].name == "emergency" then
+				card = _player.hand[i]
+			end
+		end
+		if _player.upcard != nil and _player.upcard.type == "s" then
+			_player.upcard = _player.prevupcard
+			_player.prevupcard = nil
+		end
+		card.iscf = true
+		add(_player.safeties,clonecard(card))
+		del(_player.hand,card)
+		recalculatehandpos(_player)
+		_player.cfs += 1
+		_player.limit = false
 	end
 end
 
