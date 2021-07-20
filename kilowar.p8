@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-version 29
+version 32
 __lua__
 --kilowar
 --by 2bitchuck
@@ -480,6 +480,7 @@ function update_game()
 				end
 			end
 			draw_up(currentplayer)
+			if(playercardptr > #player.hand) playercardptr = #player.hand
 			if currentplayer.name==player.name and player.hand[playercardptr] != nil and player.hand[playercardptr].y == player.cardy then
 				player.hand[playercardptr].x -= 1
 				player.hand[playercardptr].y -= 2
@@ -1334,7 +1335,7 @@ function newrace()
 end
 
 function draw_up(_curplayer)
-	if #_curplayer.hand < 7 then
+	if #_curplayer.hand < 7 and #deck > 0 then
 		card = deck[1]
 		if card != nil then
 			card.x = (#_curplayer.hand + 1) * 10 + 4
